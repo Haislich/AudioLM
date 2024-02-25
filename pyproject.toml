@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "audiolm"
+version = "0.1.0"
+description = "Implementation of AudioLM"
+authors = [
+    "Jose Manuel Del Valle Delgado <josedlv936@gmail.com>",
+    "Valerio Belli <valeriobelli26@gmail.com>",
+]
+readme = "README.md"
+license = "GPL-2.0-only"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+torch = "^2.2.1"
+pandas = "^2.2.1"
+matplotlib = "^3.8.3"
+numpy = "^1.26.4"
+torchaudio = "^2.2.1"
+ipykernel = "^6.29.2"
+
+
+[tool.poetry.group.dev.dependencies]
+pylint = "^3.1.0"
+black = "^24.2.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
