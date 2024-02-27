@@ -4,17 +4,14 @@ from textual.containers import Container
 from textual_plotext import PlotextPlot
 from textual.reactive import reactive
 import sounddevice as sd
-
 import numpy as np
 import queue
-from time import monotonic
 
-BLOCKSIZE = 512
+BLOCKSIZE = 1024
 CHANNELS = 1
 SAMPLERATE = 44100  # Sample rate
-REFRESH_INTERVAL = 0.1  # Refresh interval in seconds
+REFRESH_INTERVAL = 0.01  # Refresh interval in seconds
 MAX_RECORDING = 3  # Maximum recording time according to the paper
-DATALEN = int(MAX_RECORDING / REFRESH_INTERVAL)
 
 
 class Audio(PlotextPlot):
@@ -28,16 +25,14 @@ class Audio(PlotextPlot):
         self.__stream = sd.InputStream(
             samplerate=SAMPLERATE,
             blocksize=BLOCKSIZE,
-            callback=lambda indata, *_: self.__audio_queue.put_nowait(indata),
+            callback=lambda indata, *_: self.__audio_queue.put_nowait(
+                indata
+            ),  # https://python-sounddevice.readthedocs.io/en/0.3.14/api.html#sounddevice.InputStream
             channels=CHANNELS,
         )
-        # self.__data = np.zeros((DATALEN))
 
     def on_mount(self) -> None:
         self.set_interval(REFRESH_INTERVAL, self.graph_audio)
-
-    # https://python-sounddevice.readthedocs.io/en/0.3.14/api.html#sounddevice.InputStream
-    # def __audio_callback(indata:np.ndarray,frames:int,time, status) -> None:
 
     def start_recording(self) -> None:
         self.__record = True
@@ -52,13 +47,13 @@ class Audio(PlotextPlot):
         self.plt.xfrequency(0)
         self.plt.yfrequency(0)
         self.plt.ylim(-4, 4)
+        self.plt.theme("dark")
         audiowave = np.zeros(BLOCKSIZE).tolist()
         if self.__record:
             data = sd.rec(
                 frames=BLOCKSIZE, samplerate=SAMPLERATE, channels=1, blocking=True
             )
             audiowave = data.flatten()
-        # ignore
         self.plt.plot(audiowave, marker="braille")
         self.refresh()
 
