@@ -4,24 +4,36 @@ from textual.containers import Container
 from textual_plotext import PlotextPlot
 from textual.reactive import reactive
 
+# import numpy as np
+import sounddevice as sd
+
+CHUNKSIZE = 1024  # Adjust this according to your requirements
+RATE = 44100  # Sample rate
+
 
 class Audio(PlotextPlot):
-    audiowave = reactive(0.0)
-    __inc = 0
+    time = reactive(0.0)
+    __record = False
 
     def on_mount(self) -> None:
-        self.audiowave = self.set_interval(1 / 10, self.render_graph)
+        self.set_interval(1 / 10, self.render_graph)
 
-    def increment(self) -> None:
-        self.__inc += 1
-        self.render_graph()
+    def start_recording(self) -> None:
+        self.__record = True
+
+    def stop_recording(self) -> None:
+        self._record = False
 
     def render_graph(self) -> None:
         self.plt.clear_figure()
+
+        self.time += 0.1
+        data = sd.rec(frames=CHUNKSIZE, samplerate=RATE, channels=1, blocking=True)
+        audiowave = data.flatten()
         self.plt.xfrequency(0)
         self.plt.yfrequency(0)
-        self.audiowave = self.plt.sin(self.__inc, 20, phase=self.__inc)
-        self.plt.plot(self.audiowave)
+        self.plt.ylim(-5, 5)
+        self.plt.plot(audiowave, marker="braille")
 
 
 class Recorder(Static):
@@ -48,8 +60,7 @@ class Recorder(Static):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "start":
-            print(event.button.id)
-            self.query_one(Audio).increment()
+            self.query_one(Audio).start_recording()
 
 
 class AudioLMApp(App):
