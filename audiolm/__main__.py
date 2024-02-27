@@ -2,7 +2,6 @@ from textual.app import App, ComposeResult
 from textual.widgets import Footer, Button, Static
 from textual.containers import Container
 from textual_plotext import PlotextPlot
-
 from textual.reactive import reactive
 
 
