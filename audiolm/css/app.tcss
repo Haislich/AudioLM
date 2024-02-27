@@ -1,0 +1,27 @@
+Screen{
+    overflow:auto;
+}
+
+#buttons {
+    layout: vertical;
+    # background: $boost;
+    padding: 1;
+}
+
+#cont 
+    {
+        layout: grid;
+        grid-size: 2;
+        grid-gutter: 1;
+        grid-columns: 1fr 3fr;
+        # grid-rows: 2fr 1fr 1fr 1fr 1fr 1fr;
+        margin: 1 2;
+        min-height: 25;
+        min-width: 26;
+        height: 100%;
+    }
+
+# Button {
+#     width: 10;
+#     display:block;
+# }
