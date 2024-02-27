@@ -26,10 +26,6 @@ sounddevice = "^0.4.6"
 pylint = "^3.1.0"
 black = "^24.2.0"
 textual-dev = "^1.5.1"
-mypy = "^1.8.0"
-
-[tool.mypy]
-ignore_missing_imports = true # Ignore errors coming from packages that do not conform to PEP 561
 
 [build-system]
 requires = ["poetry-core"]
