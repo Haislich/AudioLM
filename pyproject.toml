@@ -18,7 +18,6 @@ numpy = "^1.26.4"
 torchaudio = "^2.2.1"
 ipykernel = "^6.29.2"
 textual = "^0.52.1"
-mypy = "^1.8.0"
 textual-plotext = "^0.2.1"
 sounddevice = "^0.4.6"
 
@@ -27,6 +26,10 @@ sounddevice = "^0.4.6"
 pylint = "^3.1.0"
 black = "^24.2.0"
 textual-dev = "^1.5.1"
+mypy = "^1.8.0"
+
+[tool.mypy]
+ignore_missing_imports = true # Ignore errors coming from packages that do not conform to PEP 561
 
 [build-system]
 requires = ["poetry-core"]
