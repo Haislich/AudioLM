@@ -20,6 +20,7 @@ ipykernel = "^6.29.2"
 textual = "^0.52.1"
 textual-plotext = "^0.2.1"
 sounddevice = "^0.4.6"
+tensorboard = "^2.16.2"
 
 
 [tool.poetry.group.dev.dependencies]

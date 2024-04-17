@@ -1,4 +1,10 @@
+<!-- <a target="_blank" href="https://colab.research.google.com/github/Haislich/AudioLM">
+  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
+</a> -->
+
 # AudioLM
+
+[![Colab badge](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Haislich/AudioLM)
 
 Implementation of AudioLM paper by google
 
