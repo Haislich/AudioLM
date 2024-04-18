@@ -7,7 +7,7 @@ authors = [
     "Valerio Belli <valeriobelli26@gmail.com>",
 ]
 readme = "README.md"
-license = "GPL-2.0-only"
+license = "MIT"
 
 [tool.poetry.dependencies]
 python = "^3.10"
