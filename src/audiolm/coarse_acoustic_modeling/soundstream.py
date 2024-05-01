@@ -43,7 +43,6 @@ class CausalConv1d(nn.Conv1d):
         )
         self.causal_padding_size = (kernel_size - 1) * dilation
 
-    # pylint: disable=arguments-renamed
     def forward(self, x: Tensor) -> Tensor:
         """Forward pass."""
         # https://github.com/pytorch/pytorch/issues/1333#:~:text=Isn%27t%20it%20enough%20to%20use%20F.pad%20and%20prepend%20the%20dilation%20amount%20to%20the%20sequence%3F
@@ -53,26 +52,54 @@ class CausalConv1d(nn.Conv1d):
 class ResidualUnit(nn.Module):
     """One of the main parts of the encoder block"""
 
-    # In the original paper N = in_channels and out_channels (?)
-    def __init__(self, in_channels, out_channels, dilation, *args, **kwargs) -> None:
+    # Under the assumption that N = in_channels = out_channels,
+    # residual units does not alter dimensions.
+    def __init__(self, channels, dilation, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.layers = nn.Sequential(
             CausalConv1d(
-                in_channels=in_channels,
-                out_channels=out_channels,
+                in_channels=channels,
+                out_channels=channels,
                 kernel_size=7,
                 dilation=dilation,
             ),
             nn.ELU(),
-            CausalConv1d(
-                in_channels=in_channels, out_channels=out_channels, kernel_size=1
-            ),
-            nn.ELU(),
+            CausalConv1d(in_channels=channels, out_channels=channels, kernel_size=1),
         )
 
     def forward(self, x: Tensor) -> Tensor:
         """Forward pass."""
         return self.layers(x) + x
+
+
+class EncoderBlock(nn.Module):
+    """Each of the blocks consists of three residual
+    units, containing dilated convolutions with dilation rates of 1,
+    3, and 9, respectively, followed by a down-sampling layer in
+    the form of a strided convolution"""
+
+    # Under the assumption that N = in_channels = out_channels,
+    # residual units does not alter dimensions.
+    def __init__(self, channels, stride, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.layers = nn.Sequential(
+            ResidualUnit(channels=channels // 2, dilation=1),
+            nn.ELU(),
+            ResidualUnit(channels=channels // 2, dilation=3),
+            nn.ELU(),
+            ResidualUnit(channels=channels // 2, dilation=9),
+            nn.ELU(),
+            CausalConv1d(
+                in_channels=channels,
+                out_channels=channels,
+                kernel_size=2 * stride,
+                stride=stride,
+            ),
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        """Forward pass."""
+        return self.layers(x)
 
 
 # endregion

@@ -34,3 +34,9 @@ textual-dev = "^1.5.1"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+# https://pylint.readthedocs.io/en/stable/user_guide/configuration/all-options.html
+[tool.pylint]
+disable = [
+    "W0237", # arguments-renamed
+]

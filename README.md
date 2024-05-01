@@ -4,7 +4,8 @@
 
 # AudioLM
 
-(WIP not ready yet) [![Colab badge](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Haislich/AudioLM)
+[![linting: pylint](https://img.shields.io/badge/linting-pylint-yellowgreen)](https://github.com/pylint-dev/pylint)
+[![Colab badge](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Haislich/AudioLM)(WIP not ready yet)
 
 Implementation of AudioLM paper by google
 
