@@ -46,3 +46,6 @@ def get_dataset(
                 compressed_file.extract(member=member, path=path / filename)
         os.remove(path / compressed_filename)
     print(f"Dataset is ready at {path / filename}")
+
+
+get_dataset("https://dl.fbaipublicfiles.com/librilight/data/small.tar")

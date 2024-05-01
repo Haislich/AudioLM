@@ -592,6 +592,38 @@ graph = ["objgraph (>=1.7.2)"]
 profile = ["gprof2dot (>=2022.7.29)"]
 
 [[package]]
+name = "einops"
+version = "0.8.0"
+description = "A new flavour of deep learning operations"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "einops-0.8.0-py3-none-any.whl", hash = "sha256:9572fb63046264a862693b0a87088af3bdc8c068fde03de63453cbbde245465f"},
+    {file = "einops-0.8.0.tar.gz", hash = "sha256:63486517fed345712a8385c100cb279108d9d47e6ae59099b07657e983deae85"},
+]
+
+[[package]]
+name = "einx"
+version = "0.2.2"
+description = "Tensor Operations Expressed in Einstein-Inspired Notation"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "einx-0.2.2-py3-none-any.whl", hash = "sha256:bde86f19a60bc8ce3c3aa173c0f1ba59df8d8c0435c4b61638499c3d187dd28b"},
+    {file = "einx-0.2.2.tar.gz", hash = "sha256:79f4ff77c07370c490535338365ed7b417c6d0e86e893584d50bd3fde46c62e8"},
+]
+
+[package.dependencies]
+frozendict = "*"
+numpy = "*"
+sympy = "*"
+torch = {version = ">=2", optional = true, markers = "extra == \"torch\""}
+
+[package.extras]
+keras = ["keras (>=3)"]
+torch = ["torch (>=2)"]
+
+[[package]]
 name = "exceptiongroup"
 version = "1.2.0"
 description = "Backport of PEP 654 (exception groups)"
@@ -699,6 +731,51 @@ type1 = ["xattr"]
 ufo = ["fs (>=2.2.0,<3)"]
 unicode = ["unicodedata2 (>=15.1.0)"]
 woff = ["brotli (>=1.0.1)", "brotlicffi (>=0.8.0)", "zopfli (>=0.1.4)"]
+
+[[package]]
+name = "frozendict"
+version = "2.4.2"
+description = "A simple immutable dictionary"
+optional = false
+python-versions = ">=3.6"
+files = [
+    {file = "frozendict-2.4.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:19743495b1e92a7e4db56fcd6a5d36ea1d1b0f550822d6fd780e44d58f0b8c18"},
+    {file = "frozendict-2.4.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:81efb4ea854a1c93d954a67389eaf78c508acb2d4768321a835cda2754ec5c01"},
+    {file = "frozendict-2.4.2-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:c5f1a4d9662b854dce52b560b60f51349905dc871826b8c6be20141a13067a53"},
+    {file = "frozendict-2.4.2-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:1412aeb325e4a28cfe32106c66c046372bb7fd5a9af1748193549c5d01a9e9c1"},
+    {file = "frozendict-2.4.2-cp310-cp310-musllinux_1_1_aarch64.whl", hash = "sha256:f7ce0535f02eba9746e4e2cf0abef0f0f2051d20fdccf4af31bc3d1adecf5a71"},
+    {file = "frozendict-2.4.2-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:07153e6d2720fa1131bb180ce388c7042affb29561d8bcd1c0d6e683a8beaea2"},
+    {file = "frozendict-2.4.2-cp310-cp310-win_amd64.whl", hash = "sha256:f7a90ea6d5248617a1222daef07d22fb146ff07635a36db327e1ce114bf3e304"},
+    {file = "frozendict-2.4.2-cp310-cp310-win_arm64.whl", hash = "sha256:20a6f741c92fdeb3766924cde42b8ee445cf568e3be8aa983cb83e9fe5b61e63"},
+    {file = "frozendict-2.4.2-cp36-cp36m-macosx_10_9_x86_64.whl", hash = "sha256:146129502cd9d96de64e0c8f7dc4c66422da3d4bfccf891dd80a3821b358a926"},
+    {file = "frozendict-2.4.2-cp36-cp36m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9ac1f74ccf818977abbc1868090c06436b8f06534d306f808f15cffc304ae046"},
+    {file = "frozendict-2.4.2-cp36-cp36m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7a8d2ea4f10505ad15f53ce3742420682d916d0c4d566edb8e1019756e7cea30"},
+    {file = "frozendict-2.4.2-cp36-cp36m-musllinux_1_1_aarch64.whl", hash = "sha256:4a5841681e70d2862ca153543f2912e0bab034bf29e2d3610e86ea42506121c2"},
+    {file = "frozendict-2.4.2-cp36-cp36m-musllinux_1_1_x86_64.whl", hash = "sha256:d4a10119f17552cbeab48d4ae830ba091c6d47616589618adc31f251184579a7"},
+    {file = "frozendict-2.4.2-cp36-cp36m-win_amd64.whl", hash = "sha256:7d13ffe649e9db6f4bb5e107d9be7dfd23e13101bc69f97aa5fa6cbf6aecaadd"},
+    {file = "frozendict-2.4.2-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:19e64630e164a297f83e9a1c69f1cd36fa4b3d1196c1f9fc006a0385aa198ea4"},
+    {file = "frozendict-2.4.2-cp37-cp37m-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:bedb0a6587bae53bd53727b92a87c4cf90ad7a7e0bd2db562d439beb6982712e"},
+    {file = "frozendict-2.4.2-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:83cc9d063131fd8adbeb18a473d222b5dc8301cac9505cfe578158f9a9bf55a9"},
+    {file = "frozendict-2.4.2-cp37-cp37m-musllinux_1_1_aarch64.whl", hash = "sha256:92c46b155ea9eb9ecabc66ba2d9030f2634319f55c6448688965ece094f14b51"},
+    {file = "frozendict-2.4.2-cp37-cp37m-musllinux_1_1_x86_64.whl", hash = "sha256:f958d40637e0440bce2453019821c94fe86cfc5f3847ae11cd4f02c3548b1d1b"},
+    {file = "frozendict-2.4.2-cp37-cp37m-win_amd64.whl", hash = "sha256:ac954be447a907face9b652207fbd943b9b552212890db959ba653e8f1dc3f56"},
+    {file = "frozendict-2.4.2-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:f7e0ff5e84742604a1b42c2de4f1e67630c0868cf52a5c585b54a99e06f6b453"},
+    {file = "frozendict-2.4.2-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:84c36bfa819cd8442f6e0bdb86413c7678b2822a46b1a22cfa0f0dd30d9e5c45"},
+    {file = "frozendict-2.4.2-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cead3bfe70c90c634a9b76807c9d7e75e6c5666ec96fa2cea8e7412ccf22a1f8"},
+    {file = "frozendict-2.4.2-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3fc6e3158107b5431255978b954758b1041cc70a3b8e7657373110512eb528e3"},
+    {file = "frozendict-2.4.2-cp38-cp38-musllinux_1_1_aarch64.whl", hash = "sha256:4db1d6cc412bd865cab36723995208b82166a97bc6c724753bcd2b90cf24f164"},
+    {file = "frozendict-2.4.2-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:ff6fb5831539fffb09d71cc0cc0462b1f27c0160cb6c6fa2d1f4c1bc7fffe52a"},
+    {file = "frozendict-2.4.2-cp38-cp38-win_amd64.whl", hash = "sha256:79e1c94ad2a925ad5723d82a4134c6d851d5a7bc72b7e9da8b2087c42758a512"},
+    {file = "frozendict-2.4.2-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:34704f9ffb21448d4b5c0f9239f8f058c0efab4bfdbe2956c5be978fef0b929c"},
+    {file = "frozendict-2.4.2-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:5280d685cd1659883a3010dec843afe3065416ae92e453498997d4474a898a39"},
+    {file = "frozendict-2.4.2-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:4ca09a376114172e4d9918e6d576f58244c45e21f5af1245085699fd3a171c47"},
+    {file = "frozendict-2.4.2-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:55953aa2acf5bf183c664f3d0f540f8c8ac8f5fa97170f2098d413414318eb2b"},
+    {file = "frozendict-2.4.2-cp39-cp39-musllinux_1_1_aarch64.whl", hash = "sha256:476e4857e1d87b05c9102dd5409216ce4716cb7df619e6657429bc99279303cc"},
+    {file = "frozendict-2.4.2-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:4a8b298f39242d25770d029588ce9d4f524e9f4edc60d2d34b6178fb07c8a93e"},
+    {file = "frozendict-2.4.2-cp39-cp39-win_amd64.whl", hash = "sha256:c157b8a92743a7905b341edb0663044fecdc7780f96c59a2843d3da68d694b90"},
+    {file = "frozendict-2.4.2-cp39-cp39-win_arm64.whl", hash = "sha256:cbab325c0a98b2f3ee291b36710623781b4977a3057f9103a7b0f11bcc23b177"},
+    {file = "frozendict-2.4.2.tar.gz", hash = "sha256:741779e1d1a2e6bb2c623f78423bd5d14aad35dc0c57e6ccc89e54eaab5f1b8a"},
+]
 
 [[package]]
 name = "frozenlist"
@@ -2815,6 +2892,22 @@ socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
+name = "vector-quantize-pytorch"
+version = "1.14.7"
+description = "Vector Quantization - Pytorch"
+optional = false
+python-versions = "*"
+files = [
+    {file = "vector_quantize_pytorch-1.14.7-py3-none-any.whl", hash = "sha256:f0237ceb447fbcb25696fecc543bd07e6a54d5853ac16ca36e1b6e981d908915"},
+    {file = "vector_quantize_pytorch-1.14.7.tar.gz", hash = "sha256:a2443f51370304cf8224900bb84c8ba7d134c7fd6e3a3de575a748c147684338"},
+]
+
+[package.dependencies]
+einops = ">=0.7.0"
+einx = {version = ">=0.1.3", extras = ["torch"]}
+torch = "*"
+
+[[package]]
 name = "wcwidth"
 version = "0.2.13"
 description = "Measures the displayed width of unicode strings in a terminal"
@@ -2948,4 +3041,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "2661a3f7f1161c1dbf9d2083a2c4d2c57f1d26319ebc73e78a04a536167ba3dc"
+content-hash = "4038ad319cf0ed61de03aa4aba6df75df81e1d6c64ebc5317f7724d1178236d4"
