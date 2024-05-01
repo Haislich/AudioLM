@@ -38,8 +38,14 @@ Some libraries might not work out of the box, so this packages are required:
 sudo apt-get install libportaaudio2
 ```
 
-## References
+## References - Jose'
 
-- <https://colab.research.google.com/github/fastforwardlabs/whisper-openai/blob/master/WhisperDemo.ipynb#scrollTo=wIRFnTn3Fzua>
 - [Github guidelines for repository files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file)
 - [Causal padding](https://medium.com/@stevechange/a-quick-journey-through-conv1d-functions-from-tensorflow-to-pytorch-passing-via-scipy-part-3-bda48e253953)
+- [Explanation of Residual Vector Quantization](https://drscotthawley.github.io/blog/posts/2023-06-12-RVQ.html)
+- [What are codebooks](https://machinelearning.wtf/terms/codebook/#:~:text=A%20codebook%20is%20a%20fixed,space%20of%20dimension%20Rn%20.)
+- [More on codebooks](https://ai.stanford.edu/blog/codebook-features/)
+- [Transposed Convolution](https://d2l.ai/chapter_computer-vision/transposed-conv.html)
+- [More on transposed convolution](https://towardsdatascience.com/what-is-transposed-convolutional-layer-40e5e6e31c11)
+- [Even more on transposed convolution and some examples of dilations](https://medium.com/@marsxiang/convolutions-transposed-and-deconvolution-6430c358a5b6)
+- [Convolutions in Autoregressive Neural Networks](https://www.kilians.net/post/convolution-in-autoregressive-neural-networks/)
