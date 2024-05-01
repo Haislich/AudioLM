@@ -41,3 +41,4 @@ sudo apt-get install libportaaudio2
 
 - <https://colab.research.google.com/github/fastforwardlabs/whisper-openai/blob/master/WhisperDemo.ipynb#scrollTo=wIRFnTn3Fzua>
 - [Github guidelines for repository files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file)
+- [Causal padding](https://medium.com/@stevechange/a-quick-journey-through-conv1d-functions-from-tensorflow-to-pytorch-passing-via-scipy-part-3-bda48e253953)

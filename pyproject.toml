@@ -23,6 +23,7 @@ sounddevice = "^0.4.6"
 tensorboard = "^2.16.2"
 requests = "^2.31.0"
 tqdm = "^4.66.2"
+vector-quantize-pytorch = "^1.14.7"
 
 
 [tool.poetry.group.dev.dependencies]
