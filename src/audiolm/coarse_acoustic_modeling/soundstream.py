@@ -6,7 +6,6 @@ from torch import Tensor, nn
 import torch.nn.functional as F
 
 
-# region Encoder
 class CausalConv1d(nn.Conv1d):
     """To guarantee real-time inference, all convolutions are causal.
     This means that padding is only applied to the past but not the future
@@ -49,12 +48,13 @@ class CausalConv1d(nn.Conv1d):
         return super().forward(F.pad(x, (self.causal_padding_size, 0)))
 
 
+# region Encoder
 class ResidualUnit(nn.Module):
     """One of the main parts of the encoder block"""
 
     # Under the assumption that N = in_channels = out_channels,
     # residual units does not alter dimensions.
-    def __init__(self, channels, dilation, *args, **kwargs) -> None:
+    def __init__(self, channels: int, dilation: int, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.layers = nn.Sequential(
             CausalConv1d(
@@ -80,7 +80,7 @@ class EncoderBlock(nn.Module):
 
     # Under the assumption that N = in_channels = out_channels,
     # residual units does not alter dimensions.
-    def __init__(self, channels, stride, *args, **kwargs) -> None:
+    def __init__(self, channels: int, stride: int, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.layers = nn.Sequential(
             ResidualUnit(channels=channels // 2, dilation=1),
@@ -94,6 +94,38 @@ class EncoderBlock(nn.Module):
                 out_channels=channels,
                 kernel_size=2 * stride,
                 stride=stride,
+            ),
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        """Forward pass."""
+        return self.layers(x)
+
+
+class Encoder(nn.Module):
+    """The full encoder architecture. It's inputs are single channel recordings of R^T"""
+
+    def __init__(
+        self,
+        channels_encoder: int,
+        *args,
+        channels_decoder: int | None = None,
+        **kwargs
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        channels_decoder = (
+            channels_encoder if channels_decoder is None else channels_decoder
+        )
+        self.layers = nn.Sequential(
+            CausalConv1d(in_channels=1, out_channels=channels_encoder, kernel_size=7),
+            EncoderBlock(channels=2 * channels_encoder, stride=2),
+            EncoderBlock(channels=4 * channels_encoder, stride=4),
+            EncoderBlock(channels=8 * channels_encoder, stride=5),
+            EncoderBlock(channels=16 * channels_encoder, stride=8),
+            CausalConv1d(
+                in_channels=channels_encoder,
+                out_channels=channels_decoder,
+                kernel_size=7,
             ),
         )
 
@@ -116,7 +148,6 @@ class SoundStream:
       of bits
     - A decoder, which produces a lossy reconstruction from quantized embeddings.
 
-    Its inputs are samples of an R^T dimensional vector x.
     """
 
     #
