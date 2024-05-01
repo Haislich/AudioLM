@@ -50,6 +50,31 @@ class CausalConv1d(nn.Conv1d):
         return super().forward(F.pad(x, (self.causal_padding_size, 0)))
 
 
+class ResidualUnit(nn.Module):
+    """One of the main parts of the encoder block"""
+
+    # In the original paper N = in_channels and out_channels (?)
+    def __init__(self, in_channels, out_channels, dilation, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.layers = nn.Sequential(
+            CausalConv1d(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=7,
+                dilation=dilation,
+            ),
+            nn.ELU(),
+            CausalConv1d(
+                in_channels=in_channels, out_channels=out_channels, kernel_size=1
+            ),
+            nn.ELU(),
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        """Forward pass."""
+        return self.layers(x) + x
+
+
 # endregion
 
 
