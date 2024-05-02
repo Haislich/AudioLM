@@ -5,6 +5,8 @@ from typing import Tuple
 from torch import Tensor, nn
 import torch.nn.functional as F
 
+from vector_quantize_pytorch import ResidualVQ
+
 
 # region General
 class CausalConv1d(nn.Conv1d):
@@ -48,6 +50,14 @@ class CausalConv1d(nn.Conv1d):
         # https://www.kilians.net/post/convolution-in-autoregressive-neural-networks/#:~:text=the%20next%20one.-,Causal%20padding,-One%20thing%20that
         # https://github.com/pytorch/pytorch/issues/1333#:~:text=Isn%27t%20it%20enough%20to%20use%20F.pad%20and%20prepend%20the%20dilation%20amount%20to%20the%20sequence%3F
         return super().forward(F.pad(x, (self.causal_padding_size, 0)))
+
+
+# class FilM(nn.Module):
+#     """To process the conditioning signal, we use Feature-wise
+#     Linear Modulation (FiLM)"""
+#     def __init__(self, *args, **kwargs) -> None:
+#         super().__init__(*args, **kwargs)
+#         self.layer = nn.Linear()
 
 
 class CausalConvTranspose1d(nn.ConvTranspose1d):
@@ -95,10 +105,6 @@ class CausalConvTranspose1d(nn.ConvTranspose1d):
         return super().forward(F.pad(x, (self.causal_padding_size, 0)), output_size)
 
 
-# endregion
-
-
-# region Encoder
 class ResidualUnit(nn.Module):
     """One of the main parts of the encoder block"""
 
@@ -120,6 +126,12 @@ class ResidualUnit(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         """Forward pass."""
         return self.layers(x) + x
+
+
+# endregion
+
+
+# region Encoder
 
 
 class EncoderBlock(nn.Module):
@@ -187,8 +199,77 @@ class Encoder(nn.Module):
 # endregion
 
 
+# region Decoder
+class DecoderBlock(nn.Module):
+    """The decoder block mirrors
+    the encoder block, and consists of a transposed convolution
+    for up-sampling followed by the same three residual units. We
+    use the same strides as the encoder, but in reverse order, to
+    reconstruct a waveform with the same resolution as the input
+    waveform."""
+
+    def __init__(self, channels: int, stride: int, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.layers = nn.Sequential(
+            CausalConvTranspose1d(
+                in_channels=channels,
+                out_channels=channels,
+                kernel_size=2 * stride,
+                stride=stride,
+            ),
+            nn.ELU(),
+            ResidualUnit(channels=channels // 2, dilation=1),
+            nn.ELU(),
+            ResidualUnit(channels=channels // 2, dilation=3),
+            nn.ELU(),
+            ResidualUnit(channels=channels // 2, dilation=9),
+        )
+
+    def forward(self, x: Tensor):
+        """Forward pass."""
+        return self.layers(x)
+
+
+class Decoder(nn.Module):
+    """The decoder architecture follows a similar design as the Encoder architecture."""
+
+    def __init__(
+        self,
+        channels_encoder: int,
+        *args,
+        channels_decoder: int | None = None,
+        **kwargs
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        channels_decoder = (
+            channels_encoder if channels_decoder is None else channels_decoder
+        )
+        self.layers = nn.Sequential(
+            CausalConv1d(
+                in_channels=channels_decoder,
+                out_channels=16 * channels_encoder,
+                kernel_size=7,
+            ),
+            nn.ELU(),
+            DecoderBlock(channels=8 * channels_encoder, stride=8),
+            nn.ELU(),
+            DecoderBlock(channels=4 * channels_encoder, stride=5),
+            nn.ELU(),
+            DecoderBlock(channels=2 * channels_encoder, stride=4),
+            nn.ELU(),
+            DecoderBlock(channels=channels_encoder, stride=2),
+            nn.ELU(),
+            CausalConv1d(in_channels=channels_encoder, out_channels=1, kernel_size=7),
+        )
+
+    def forward(self, x: Tensor):
+        """Forward pass."""
+        return self.layers(x)
+
+
+# endregion
 # region SoundStream
-class SoundStream:
+class SoundStream(nn.Module):
     """The SoundStream model consists of a sequence of three
         building blocks
 
@@ -200,7 +281,35 @@ class SoundStream:
 
     """
 
-    #
+    def __init__(
+        self,
+        channels_encoder,
+        channels_decoder,
+        num_quantizers,
+        codebook_dim,
+        *args,
+        **kwargs
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.encoder = Encoder(
+            channels_encoder=channels_encoder, channels_decoder=channels_decoder
+        )
+        self.quantizer = ResidualVQ(
+            num_quantizers=num_quantizers,
+            dim=channels_decoder,
+            codebook_dim=codebook_dim,
+        )
+        self.decoder = Decoder(
+            channels_decoder=channels_decoder, channels_encoder=channels_encoder
+        )
+
+    def forward(self, x: Tensor) -> Tensor:
+        """Forward pass."""
+        enc = self.encoder(x)
+        #  ret = (quantized_out, all_indices, all_losses)
+        quantized, _, _ = self.quantizer(enc)  # This will be needed for AudioLM
+        dec = self.decoder(quantized)
+        return dec
 
 
 # endregion
