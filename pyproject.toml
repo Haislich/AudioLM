@@ -26,6 +26,7 @@ tqdm = "^4.66.2"
 vector-quantize-pytorch = "^1.14.7"
 transformers = "^4.40.1"
 datasets = "^2.19.0"
+librosa = "^0.10.2"
 
 
 [tool.poetry.group.dev.dependencies]
