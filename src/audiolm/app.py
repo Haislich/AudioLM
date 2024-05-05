@@ -42,7 +42,7 @@ class Audio(PlotextPlot):
             raise ValueError(
                 f"\nMode `{mode}` is not a valid mode.\nAvailable modes are {self.__modes}"
             )
-        self.__data = []
+        # self.__data = []
         if mode == "recorder":
             self.__stream = sd.InputStream(
                 samplerate=SAMPLERATE,

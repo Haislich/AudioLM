@@ -1,3 +1,7 @@
+"""# Jose: 
+This module contains the definition of the transformer 
+used during the coarse acoustic modelling phase"""
+
 from typing import Any, Callable
 from torch import Tensor, nn
 from torch.nn.functional import relu
