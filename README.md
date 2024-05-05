@@ -50,3 +50,4 @@ sudo apt-get install libportaaudio2
 - [Even more on transposed convolution and some examples of dilations](https://medium.com/@marsxiang/convolutions-transposed-and-deconvolution-6430c358a5b6)
 - [Convolutions in Autoregressive Neural Networks](https://www.kilians.net/post/convolution-in-autoregressive-neural-networks/)
 - [Encodec, meta neural encoder](https://github.com/facebookresearch/encodec)
+- [https://ml-retrospectives.github.io/neurips2019/accepted_retrospectives/2019/film/]
