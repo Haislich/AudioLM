@@ -1,5 +1,5 @@
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 import torch.nn.functional as F
 from pathlib import Path
 
@@ -51,3 +51,4 @@ class AudioDataset(Dataset):
         audio = audio.squeeze(0) #We don't need anymore the channel dimension
 
         return audio
+

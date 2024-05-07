@@ -1,0 +1,6 @@
+{
+    "model_name": "hf-audio/wav2vec2-bert-CV16-en",
+    "n_clusters": 1024,
+    "n_init": 5,
+    "kmeans_verbose": 1
+}
