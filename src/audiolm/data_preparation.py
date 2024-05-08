@@ -52,3 +52,42 @@ class AudioDataset(Dataset):
 
         return audio
 
+
+class AudioDataLoader(DataLoader): 
+    def __init__(self, data_path, batch_size=4, shuffle=False):
+        self.dataset = AudioDataset(data_path)
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+        super().__init__(self.dataset, batch_size=batch_size, shuffle=False)
+
+    
+    def __len__(self):
+        return len(self.dataset)
+    
+    def __collate_fn(self, batch):
+        audio = [elem for elem in batch]
+
+        audio = torch.stack(audio)
+
+        return audio
+    
+    def start_DataLoader(self):
+        return DataLoader(self.dataset, batch_size=self.batch_size, shuffle=self.shuffle, collate_fn=self.__collate_fn)
+
+##just for test
+
+"""
+data = "/Users/valerio/Desktop/exterminationamericanbison_12_hornaday_64kb_0032.flac"
+audio, sr = librosa.load(data, sr=24000)
+audio = torch.tensor(audio)
+audio2, sr2 = librosa.load(data, sr=24000)
+audio2 = torch.tensor(audio)
+
+print("Ecco l'audio: ", audio.shape)
+
+#audio = audio.unsqueeze(0) #Simulo la batch size
+print("Ecco l'audio ora: ", audio.shape)
+
+a = AudioDataLoader(data_path=None)
+print(a.__collate_fn([audio,audio2]))
+"""
