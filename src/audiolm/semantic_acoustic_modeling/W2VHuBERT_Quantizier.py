@@ -72,7 +72,7 @@ class W2VHuBERT_Quantizier(nn.Module):
         self.model.eval()
         self.sample_frequency = sample_frequency
         self.input_audio_hz = 24000
-        self.layer = 9
+        self.layer = 5
         self.clusters = torch.from_numpy(self.kmeans.cluster_centers_)
 
 
