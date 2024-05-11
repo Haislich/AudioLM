@@ -76,7 +76,6 @@ class AudioDataset(Dataset):
             if audio.shape[0] > 1:
                 audio = audio.mean(0, keepdim=True)
             data.append(audio)
-            print(f"Original: {audio.size(1)}")
             # This handles the case in which the max lenght is None.
             if max_len < audio.size(1):
                 max_len = audio.size(1)

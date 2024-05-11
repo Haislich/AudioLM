@@ -1,8 +1,10 @@
 """# Jose: 
 This module contains a custom definition of the Meta `EnCodec` model."""
 
+from typing import Optional
+import torch
+from torch import nn
 from transformers import EncodecModel
-from torch import nn, Tensor
 
 
 class CustomEncodecModel(nn.Module):
@@ -18,22 +20,33 @@ class CustomEncodecModel(nn.Module):
         super().__init__()
         self.encodec = EncodecModel.from_pretrained("facebook/encodec_24khz")
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Performs the forward pass of the CustomEncodec model using the base Encoder.
 
         """
         return self.encodec(x)
 
-    def encode(self, x: Tensor) -> Tensor:
+    # https://github.com/huggingface/transformers/blob/e0c3cee17085914bbe505c159beeb8ae39bc37dd/src/transformers/models/encodec/modeling_encodec.py#L580
+    def encode(
+        self,
+        x: torch.Tensor,
+        padding_mask: torch.Tensor = None,
+        bandwidth: Optional[float] = None,
+    ) -> torch.Tensor:
         """Encode the input into a discrete representation."""
-        return self.encodec.encode(x)
+        return self.encodec.encode(x, padding_mask, bandwidth)
 
 
 if __name__ == "__main__":
     import os
     from audiolm.data_preparation import AudioDataLoader
 
-    dataloader = AudioDataLoader(os.getcwd() + "\\data\\datasets\\mini")
-    encodec = CustomEncodecModel()
-    print(encodec.encode(next(iter(dataloader))))
+    dataloader = AudioDataLoader(
+        data_path=os.getcwd() + "\\data\\datasets\\mini",
+        batch_size=2,
+        shuffle=False,
+        max_length_audio=20,
+        sample_frequency=24000,
+    )
+    print(next(iter(dataloader)))
