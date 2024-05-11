@@ -164,7 +164,7 @@ class Player(Static):
 class AudioLMApp(App):
     """A Textual app to manage AudioLM."""
 
-    CSS_PATH = "./css/app.tcss"
+    CSS_PATH = "./../css/app.tcss"
 
     BINDINGS = []
 
