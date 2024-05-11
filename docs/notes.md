@@ -56,6 +56,7 @@ However, self-supervised learning approaches in the context of audio often targe
 Self-supervised learning methods based on contrastive and predictive objectives tend to capture coarse, high-level information about the audio signal, making them useful for discriminative tasks like speech recognition or audio classification. However, they may not encode fine details of the original audio signal, limiting their direct usability for synthesis tasks.
 
 The AudioLM approach addressed in the passage leverages these high-level representations obtained from self-supervised learning as a conditioning signal for audio synthesis. By using these representations to guide the prediction of high-quality acoustic tokens, AudioLM can generate synthesized audio that retains semantic information while also capturing fine details of the original signal, thus overcoming the limitations of other self-supervised learning approaches in audio synthesis.
+[This however does not not come for free](#tradeoffs-of-discrete-audio-representations)
 
 ### Generating natural signals with language models
 
@@ -68,3 +69,29 @@ This scalability issue limits the direct application of self-attention-based mod
 A solution is to map the natural signals to a compact, discrete representation space, where the representations can be modeled using autoregressive Transformers.
 
 ## Model
+
+### Components
+
+We consider a single channel audio sequence $x\in\mathbb{R}^T$,
+which is processed by the following three components of the AudioLM
+framework:
+
+- **Tokenizer model** : this component takes as input the audio and maps into a sequence of discrete tokens. Such sequence is two to three orders of magnitue smaller than the original size ($T$, dimension of $x$).
+- **Decoder only Transformer LM**: this component operates on discrete tokens reulting from the tokenizer model. At inference time predicts the next token based on the previos.
+- **Detokenizer model**: this maps the sequence of predicted tokens back to audio.
+
+### Tradeoffs of discrete audio representations
+
+While we want to reconstruct audio waverforms ar high-quality, we also want to obtain a compact representation that captures long-term dependencies.
+This are in fact conflicting requirements.
+To reconcile them we need both semantic tokens and sintactic tokens.
+The semantic tokens enable a compact representation with long term coherence, while the sintactic tokens enable high-audio quality.
+
+### Hierarchical modeling of semantic and acoustic token
+
+The AudioLM framework adopts a hierarchical approach to modeling, where semantic tokens are modeled first for the entire sequence, and then these semantic tokens are used as conditioning to predict the acoustic tokens.
+
+- **Semantic modeling**: The first stage models the autoregressive prediction of semantic tokens to capture longterm temporal structure.
+- **Coarse acoustic modeling**: In the second stage of the AudioLM framework, the focus is on predicting acoustic tokens from the coarse quantizers of the SoundStream model. The acoustic tokens are conditioned (?) on the semantic tokens obtained from the first stage of the framework. Due to residual quantization in the SoundStream model, the acoustic tokens exhibit a hierarchical structure. We rely
+on the simple approach of flattening the acoustic tokens
+in a row-major order to handle their hierarchical structure.

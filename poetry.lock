@@ -1323,6 +1323,20 @@ files = [
 ]
 
 [[package]]
+name = "iprogress"
+version = "0.4"
+description = "Text progress bar library for Python."
+optional = false
+python-versions = "*"
+files = [
+    {file = "IProgress-0.4-py3-none-any.whl", hash = "sha256:098ba92780bf0eb3f2f3a0d4109e48d1f3c8ba57d821c6838f9ccb73e4fdc576"},
+    {file = "IProgress-0.4.tar.gz", hash = "sha256:55c6bce8ad4401889330fb1125c0bf7810bfbfe0105c058f861ae91e962d51eb"},
+]
+
+[package.dependencies]
+six = "*"
+
+[[package]]
 name = "ipykernel"
 version = "6.29.3"
 description = "IPython Kernel for Jupyter"
@@ -4594,4 +4608,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "512f6e432124d6e1bddd279c545e0bc67c0977fc00f3f4f5ede9c654536294c3"
+content-hash = "45d65420e8c45dee23f0dca2d2ac03ed0e92eab1643332f8e49723c27c8a09ee"

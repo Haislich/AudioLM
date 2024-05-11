@@ -18,19 +18,22 @@ class CustomEncodecModel(nn.Module):
         super().__init__()
         self.encodec = EncodecModel.from_pretrained("facebook/encodec_24khz")
 
-    def forward(self, x: Tensor, encode: bool = True):
+    def forward(self, x: Tensor) -> Tensor:
         """
-        Performs the forward pass of the CustomEncodec model.
+        Performs the forward pass of the CustomEncodec model using the base Encoder.
 
-        Args:
-            x: torch.Tensor
-                The input tensor.
-            encode: bool
-                flag indicating whether to encode or decode.
-
-        Returns:
-            If encode is True, returns the audio codes. Otherwise, returns the decoded output.
         """
-        return (
-            self.encodec.encode(x).audio_codes[0] if encode else self.encodec.decode(x)
-        )
+        return self.encodec(x)
+
+    def encode(self, x: Tensor) -> Tensor:
+        """Encode the input into a discrete representation."""
+        return self.encodec.encode(x)
+
+
+if __name__ == "__main__":
+    import os
+    from audiolm.data_preparation import AudioDataLoader
+
+    dataloader = AudioDataLoader(os.getcwd() + "\\data\\datasets\\mini")
+    encodec = CustomEncodecModel()
+    print(encodec.encode(next(iter(dataloader))))
