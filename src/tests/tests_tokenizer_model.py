@@ -15,5 +15,4 @@ class TestEncodec(unittest.TestCase):
         sample_frequency=24000,
     )
     encodec = CustomEncodecModel()
-    def test_encode(self):
-        
+    # def test_encode(self):

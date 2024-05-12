@@ -13,7 +13,7 @@ from transformers import AutoProcessor, Wav2Vec2BertModel
 
 
 def load_model():
-    config_path = "./config.json"
+    config_path = os.getcwd() + "/config.json"
     assert (Path(config_path).exists(), f"Config file not found in {config_path}")
     with open(config_path, "r") as f:
         config = json.load(f)

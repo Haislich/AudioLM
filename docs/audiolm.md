@@ -1,4 +1,4 @@
-# Notes
+# AudioLM
 
 This is a file that contains notes and explanations about the original paper.
 This serves me (Jose') only as a reference and to make sure that we've got everything covered.
