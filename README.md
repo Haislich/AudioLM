@@ -38,7 +38,7 @@ Some libraries might not work out of the box, so this packages are required:
 sudo apt-get install libportaaudio2
 ```
 
-## References - Jose'
+## References
 
 - [Github guidelines for repository files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file)
 - [Causal padding](https://medium.com/@stevechange/a-quick-journey-through-conv1d-functions-from-tensorflow-to-pytorch-passing-via-scipy-part-3-bda48e253953)
@@ -51,3 +51,5 @@ sudo apt-get install libportaaudio2
 - [Convolutions in Autoregressive Neural Networks](https://www.kilians.net/post/convolution-in-autoregressive-neural-networks/)
 - [Encodec, meta neural encoder](https://github.com/facebookresearch/encodec)
 - [https://ml-retrospectives.github.io/neurips2019/accepted_retrospectives/2019/film/]
+- [AudioLM: a Language Modeling Approach to Audio Generation](https://research.google/blog/audiolm-a-language-modeling-approach-to-audio-generation/#:~:text=AudioLM%20is%20a%20pure%20audio,models%2C%20one%20for%20each%20stage)
+- [Google Ai principles](https://ai.google/responsibility/principles/)

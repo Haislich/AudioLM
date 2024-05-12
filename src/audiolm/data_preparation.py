@@ -72,7 +72,7 @@ class AudioDataset(Dataset):
             audio, sr = torchaudio.load(elem, channels_first=True)
             if sr != self.sample_frequency:
                 audio = torchaudio.functional.resample(audio, sr, self.sample_frequency)
-
+            # We work with just one channel.
             if audio.shape[0] > 1:
                 audio = audio.mean(0, keepdim=True)
             data.append(audio)
@@ -95,7 +95,7 @@ class AudioDataset(Dataset):
 
     def __getitem__(self, idx):
         audio = self.data[idx]
-        audio = audio.squeeze(0)  # We don't need anymore the channel dimension
+        # audio = audio.squeeze(0)  # We don't need anymore the channel dimension
         return audio
 
 

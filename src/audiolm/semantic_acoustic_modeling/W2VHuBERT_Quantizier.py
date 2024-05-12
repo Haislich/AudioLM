@@ -17,7 +17,7 @@ import joblib
 
 
 def load_checkpoint():
-    config_path = "./config.json"
+    config_path = os.getcwd() + r"\src\audiolm\semantic_acoustic_modeling\config.json"
     assert Path(config_path).exists(), f"Config file not found in {config_path}"
     with open(config_path, "r") as f:
         config = json.load(f)
@@ -76,7 +76,7 @@ class W2VHuBERT_Quantizier(nn.Module):
         self.model.eval()
         self.sample_frequency = sample_frequency
         self.input_audio_hz = 24000
-        self.layer = 5
+        self.layer = 9
         self.clusters = torch.from_numpy(self.kmeans.cluster_centers_)
 
     def forward(self, input_audio):
@@ -99,10 +99,14 @@ class W2VHuBERT_Quantizier(nn.Module):
                 features_only=True,
                 output_layer=self.layer,
             )["x"]
+            print(embedding.shape)
             expand_cluster = self.clusters.unsqueeze(0).expand(
                 embedding.size(0), -1, -1
             )
+            print(expand_cluster.shape)
+
             embedding_expanded = embedding.unsqueeze(2)
+            print(embedding_expanded.shape)
             expand_cluster_expanded = expand_cluster.unsqueeze(1)
             distance = (embedding_expanded - expand_cluster_expanded).pow(2).sum(-1)
             quantized = distance.argmax(-1)
@@ -118,6 +122,7 @@ class W2VHuBERT_Quantizier(nn.Module):
         """
         semantic_tokens = []
         for batch in tqdm.tqdm(self.dataloader):
+            batch = batch.squeeze(1)
             batch = batch.to(self.device)
             out = self.forward(batch)
             semantic_tokens.append(out)
@@ -144,3 +149,13 @@ hq = W2VHuBERT_Quantizier()
 
 hq.forward(audio, sr)
 """
+
+if __name__ == "__main__":
+    import os
+    from audiolm.coarse_acoustic_modelling.custom_encodec import CustomEncodecModel
+    from audiolm.data_preparation import AudioDataset, AudioDataLoader
+    from pathlib import Path
+
+    dataloader = AudioDataLoader(os.getcwd() + "\\data\\datasets\\mini", 3)
+    hubert = W2VHuBERT_Quantizier(dataloader=dataloader)
+    print(hubert.fit())
