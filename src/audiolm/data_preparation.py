@@ -7,7 +7,7 @@ import torch
 import torchaudio
 from torch.utils.data import DataLoader, Dataset
 
-from audiolm.semantic_acoustic_modeling.utils import (
+from semantic_acoustic_modeling.utils import (
     padding_audio,
     cut_audio,
 )
@@ -22,13 +22,13 @@ class AudioDataset(Dataset):
     Args:
         path_folder (str): Path to the folder containing the audio files.
         max_length_audio (int, optional): Maximum length of the audio in seconds.
-        sample_frequency (int, optional): Sample frequency of the audio in Hz. Defaults to 24000.
+        sample_frequency (int, optional): Sample frequency of the audio in Hz. Defaults to 16000.
 
     Returns:
         torch.Tensor: Audio data tensor.
     """
 
-    def __init__(self, path_folder, max_length_audio=None, sample_frequency=24000):
+    def __init__(self, path_folder, max_length_audio=3, sample_frequency=16000):
         super().__init__()
         self.path_folder = Path(path_folder)
         assert (
@@ -36,12 +36,10 @@ class AudioDataset(Dataset):
         ), f'Watch out! "{str(self.path_folder)}" was not found.'
         self.max_length_audio = max_length_audio
         self.sample_frequency = sample_frequency
-        self.max_len = (
-            max_length_audio * sample_frequency
-            if max_length_audio is not None
-            else None
-        )
-        self.data = self.get_ready_audio()
+        self.max_len = max_length_audio * sample_frequency
+        self.path_audios = self.__collate_audio()
+        self.data = []
+        self.preprocess_dataset()
 
     def __len__(self):
         return len(self.data)
@@ -57,45 +55,40 @@ class AudioDataset(Dataset):
 
         return path_audios
 
-    def get_ready_audio(self):
+    def preprocess_dataset(self):
         """
         Preprocesses the audio data.
 
         Returns:
             list: List of preprocessed audio tensors.
         """
-        path_audios = self.__collate_audio()
-        data = []
-        max_len = -1
-        for elem in path_audios:
+        overlap = 0.01 * self.max_len
+        for path in self.path_audios:
             # Load the audio file and its sample rate, resampling it if necessary
-            audio, sr = torchaudio.load(elem, channels_first=True)
+            audio, sr = torchaudio.load(path, channels_first=True)
             if sr != self.sample_frequency:
                 audio = torchaudio.functional.resample(audio, sr, self.sample_frequency)
-            # We work with just one channel.
-            if audio.shape[0] > 1:
-                audio = audio.mean(0, keepdim=True)
-            data.append(audio)
-            # This handles the case in which the max lenght is None.
-            if max_len < audio.size(1):
-                max_len = audio.size(1)
-        if self.max_len is None:
-            self.max_len = max_len
 
-        for i, audio in enumerate(data):
+            samples = audio.size(1)
+            start = 0
+            while start + self.max_len < samples:
+                self.data.append((path, start, start + self.max_len))
+                start += (self.max_len - overlap)
+            self.data.append((path, start, samples))
 
-            # Padding audios
-            if audio.size(1) < self.max_len:
-                data[i] = padding_audio(audio, self.max_len)
-            # Or cutting them if they are too long
-            elif audio.size(1) > self.max_len:
-                data[i] = cut_audio(audio, self.max_len)
-
-        return data
 
     def __getitem__(self, idx):
-        audio = self.data[idx]
-        # audio = audio.squeeze(0)  # We don't need anymore the channel dimension
+        path, start, end = self.data[idx]
+        audio, sr = torchaudio.load(path, channels_first=True, frame_offset=start, num_frames=end - start)
+        if sr != self.sample_frequency:
+            audio = torchaudio.functional.resample(audio, sr, self.sample_frequency)
+        
+        if audio.shape[0] > 1:
+            audio = audio.mean(0, keepdim=True)
+        
+        if audio.size(1) < self.max_len:
+            audio = padding_audio(audio, self.max_len)
+        
         return audio
 
 
@@ -119,22 +112,15 @@ class AudioDataLoader(DataLoader):
         data_path,
         batch_size=2,
         shuffle=False,
-        max_length_audio=20,
-        sample_frequency=24000,
+        max_length_audio=3,
+        sample_frequency=16000,
     ):
         self.dataset = AudioDataset(
             data_path,
             max_length_audio=max_length_audio,
             sample_frequency=sample_frequency,
         )
-        self.batch_size = batch_size
-        self.max_len = (
-            max_length_audio * sample_frequency
-            if max_length_audio is not None
-            else None
-        )
-        self.shuffle = shuffle
-        super().__init__(self.dataset, batch_size=batch_size, shuffle=False)
+        super().__init__(self.dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=self.__collate_fn)
 
     def __len__(self):
         return len(self.dataset)
@@ -145,27 +131,16 @@ class AudioDataLoader(DataLoader):
 
         return audio
 
-    def return_dataloader(self):
-        """
-        Returns:
-            DataLoader: The DataLoader object for loading audio data.
-        """
-        return DataLoader(
-            self.dataset,
-            batch_size=self.batch_size,
-            shuffle=self.shuffle,
-            collate_fn=self.__collate_fn,
-        )
+
 
 
 ##just for test
 
 
-# data = "/Users/valerio/Desktop/ei"
+data = "/Users/valerio/Desktop/ei"
 
-# a = AudioDataLoader(data_path=data, batch_size=2, shuffle=False, max_length_audio=20, sample_frequency=24000)
+a = AudioDataLoader(data_path=data, batch_size=5, shuffle=False, max_length_audio=3)
 # dataloader = a.return_DataLoader()
-# print(dataloader.__len__())
-# for batch in dataloader:
-#     print(batch.shape)
-#     print(batch)
+print(a.__len__())
+for batch in a:
+    print(batch.shape)
