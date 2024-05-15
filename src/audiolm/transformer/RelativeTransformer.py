@@ -236,12 +236,13 @@ class CasualAttentionBlock(nn.Module):
 
 
 class RelativeTransformer(nn.Module):
-    def __init__(self, num_layers=12, embed_dim=100):
+    def __init__(self, num_layers=12, embed_dim=1024, vocab_size=500):
         super().__init__()
         
         self.num_layers = num_layers
         self.embed_dim = embed_dim
-        self.token_embed_table = "TODO"
+        self.vocab_size = vocab_size
+        self.token_embed_table = nn.Embedding(self.vocab_size, self.embed_dim)
         self.pos_embed_table = "TODO"
         self.layers = nn.ModuleList([CasualAttentionBlock(embed_dim) for _ in range(num_layers)])
         self.layer_norm = nn.LayerNorm(embed_dim)
