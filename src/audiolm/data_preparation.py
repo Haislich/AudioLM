@@ -123,7 +123,7 @@ class AudioDataLoader(DataLoader):
         super().__init__(self.dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=self.__collate_fn)
 
     def __len__(self):
-        return len(self.dataset)
+        return len(self.dataset)  # Return the length of the data list.
 
     def __collate_fn(self, batch):
         audio = [elem for elem in batch]

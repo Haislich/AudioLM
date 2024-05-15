@@ -9,9 +9,28 @@ or via as a cli application (TODO) by using
 audiolm-cli
 """
 
-from audiolm.app import AudioLMApp
+# from audiolm.app import AudioLMApp
 
+from data_preparation import AudioDataLoader
+from semantic_acoustic_modeling.W2VHuBERT_Quantizier import W2VHuBERT_Quantizier
+
+
+# if __name__ == "__main__":
+#     app = AudioLMApp()
+#     app.run()
 
 if __name__ == "__main__":
-    app = AudioLMApp()
-    app.run()
+
+    ##Semantic stage##
+    dataloader = AudioDataLoader(data_path="/Users/valerio/Desktop/ei", batch_size=5, shuffle=False, max_length_audio=3)
+    for batch in dataloader:
+        print(batch.shape)
+    print(dataloader.__len__())
+
+    hubert = W2VHuBERT_Quantizier(dataloader=dataloader, sample_frequency=16000, input_audio_hz=16000)
+    batch_1 = next(iter(dataloader))
+    semantic_tokens = hubert.forward(batch_1)
+    print(semantic_tokens.shape)
+  
+    # for token in semantic_tokens:
+    #     inputs = 
