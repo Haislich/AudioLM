@@ -16,6 +16,7 @@ class TransformerDecoderOnly(nn.Module):
         self.layers = layers
         self.feedforward_dim = feedforward_dim
         self.attn_dropout_prob = attn_dropout_prob
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.embedding_table = nn.Embedding(vocab_size, embed_dim)
         self.positional_encoding = PositionalEncoding(embed_dim)
@@ -49,6 +50,10 @@ class TransformerDecoderOnly(nn.Module):
         )
         output = self.fc_out(output)
         return output
+
+    def generate_causal_mask(self, seq_len=149):
+        mask = torch.triu(torch.ones((seq_len, seq_len)), diagonal=1).bool()
+        return mask
 
 
 class PositionalEncoding(nn.Module):

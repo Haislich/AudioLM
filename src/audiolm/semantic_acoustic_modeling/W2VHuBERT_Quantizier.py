@@ -6,6 +6,8 @@ import torchaudio
 from torch import nn
 import torchaudio.functional as F
 
+from data_preparation import AudioDataLoader
+
 
 from pathlib import Path
 import json
@@ -14,11 +16,14 @@ import tqdm
 import fairseq
 from sklearn.cluster import KMeans
 import joblib
+import logging
+from math import ceil
 
 ##Utils functions
 
 
 def load_checkpoint():
+    logging.getLogger('fairseq').setLevel(logging.WARNING)
     config_path = os.getcwd() + r"/src/audiolm/semantic_acoustic_modeling/config.json"
     assert Path(config_path).exists(), f"Config file not found in {config_path}"
     with open(config_path, "r") as f:
@@ -69,7 +74,7 @@ class W2VHuBERT_Quantizier(nn.Module):
         clusters (torch.Tensor): The cluster centers used for quantization.
     """
 
-    def __init__(self, sample_frequency=16000, input_audio_hz=24000, dataloader=None):
+    def __init__(self, sample_frequency=16000, input_audio_hz=16000, dataloader:AudioDataLoader=None):
         super().__init__()
         self.model, self.kmeans = load_checkpoint()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -95,6 +100,9 @@ class W2VHuBERT_Quantizier(nn.Module):
             input_audio = F.resample(
                 input_audio, self.input_audio_hz, self.sample_frequency
             )
+        if input_audio.dim() == 3:
+            input_audio = input_audio.squeeze(1)
+        print(input_audio.shape)
         with torch.no_grad():
             embeddings = self.model(
                 input_audio,
@@ -114,16 +122,19 @@ class W2VHuBERT_Quantizier(nn.Module):
         return quantized
 
 
-    def fit(self):
+    def build_TokenDataset(self):
         """
-        Fit the quantizer to the input data and return the quantized tokens.
+
+        Fit the quantizer to the input data and return the quantized tokens. 
 
         Returns:
             list: List of quantized tokens.
         """
         semantic_tokens = []
-        for batch in tqdm.tqdm(self.dataloader):
+        for batch in tqdm.tqdm(self.dataloader, total=ceil(self.dataloader.__len__()/self.dataloader.batch_size)):
+            #print(batch.shape)
             batch = batch.squeeze(1)
+            #print(batch.shape)
             batch = batch.to(self.device)
             out = self.forward(batch)
             semantic_tokens.append(out)
@@ -148,12 +159,12 @@ class W2VHuBERT_Quantizier(nn.Module):
 # hq.forward(audio)
 
 
-if __name__ == "__main__":
-    import os
-    from audiolm.coarse_acoustic_modelling.custom_encodec import CustomEncodecModel
-    from audiolm.data_preparation import AudioDataset, AudioDataLoader
-    from pathlib import Path
+# if __name__ == "__main__":
+#     import os
+#     from audiolm.coarse_acoustic_modelling.custom_encodec import CustomEncodecModel
+#     from audiolm.data_preparation import AudioDataset, AudioDataLoader
+#     from pathlib import Path
 
-    dataloader = AudioDataLoader(os.getcwd() + "\\data\\datasets\\mini", 3)
-    hubert = W2VHuBERT_Quantizier(dataloader=dataloader)
-    print(hubert.fit())
+#     dataloader = AudioDataLoader(os.getcwd() + "\\data\\datasets\\mini", 3)
+#     hubert = W2VHuBERT_Quantizier(dataloader=dataloader)
+#     print(hubert.fit())
