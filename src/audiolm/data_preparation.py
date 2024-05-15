@@ -137,10 +137,10 @@ class AudioDataLoader(DataLoader):
 ##just for test
 
 
-data = "/Users/valerio/Desktop/ei"
+# data = "/Users/valerio/Desktop/ei"
 
-a = AudioDataLoader(data_path=data, batch_size=5, shuffle=False, max_length_audio=3)
-# dataloader = a.return_DataLoader()
-print(a.__len__())
-for batch in a:
-    print(batch.shape)
+# a = AudioDataLoader(data_path=data, batch_size=5, shuffle=False, max_length_audio=3)
+# # dataloader = a.return_DataLoader()
+# print(a.__len__())
+# for batch in a:
+#     print(batch.shape)
