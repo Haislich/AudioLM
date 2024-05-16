@@ -45,16 +45,25 @@ class AudioLM(nn.Module):
     def forward(self, x: torch.Tensor):
         # region Semantic Modelling
         semantic_token = self.semantic_encoder(x)
+        transformer_input = semantic_token_batch[:, :-1].to(self.device)
+        target = semantic_token_batch[:, 1:].to(self.device)
+        casual_mask = self.semantic_transformer.generate_causal_mask(seq_len=x.size(1))
         semantic_modelling = self.semantic_transformer(semantic_token)
         # endregion
+
         # region Coarse Acoustic Modelling
         coarse_acoustic_token, fine_acoustic_token, audio_scales = (
             self.acoustic_encoder.encode(x)
         )
-        conditioning = torch.cat((semantic_modelling, coarse_acoustic_token))
-        coarse_acoustic_modelling = self.acoustic_transformer(conditioning)
+
+        conditioning = torch.cat((semantic_modelling, coarse_acoustic_token), dim=1)
+        coarse_acoustic_modelling = self.acoustic_transformer(
+            conditioning.type(torch.int64)
+        )
         # endregion
+
         # region Fine Acoustic modelling
+        fine_acoustic_token = torch.Tensor(fine_acoustic_token)
         conditioning = torch.cat((coarse_acoustic_modelling, fine_acoustic_token))
         fine_acoustic_modelling = self.fine_transformer(conditioning, audio_scales)
         # endregion
@@ -73,8 +82,15 @@ def pipeline():
         500,  # Valore massimo del quantizzatore
         768,  # Numero arbitratio
     )
-    # encodec = CustomEncodecModel()
-    # acoustic_transfomer  = TransformerDecoderOnly(
-    #     500,  # Valore massimo del quantizzatore
-    #     768,  # Numero arbitratio
-    # )
+    encodec = CustomEncodecModel()
+    acoustic_transfomer = TransformerDecoderOnly(
+        1024,  # Valore massimo del quantizzatore
+        1024,  # Numero arbitratio
+    )
+    fine_transformer = TransformerDecoderOnly(1024, 1024)
+    return AudioLM(
+        hubert, semantic_transformer, encodec, acoustic_transfomer, fine_transformer
+    )(next(iter(dataloader)))
+
+
+print(pipeline())

@@ -27,6 +27,7 @@ class TransformerDecoderOnly(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.embedding_table = nn.Embedding(vocab_size, embed_dim)
+
         self.positional_encoding = PositionalEncoding(embed_dim)
 
         decoder_layer = nn.TransformerDecoderLayer(
@@ -44,6 +45,8 @@ class TransformerDecoderOnly(nn.Module):
         self.fc_out = nn.Linear(embed_dim, vocab_size)
 
     def forward(self, tgt, memory=None, tgt_mask=None, tgt_key_padding_mask=None):
+
+        print(f"tgt:{tgt.shape},  {math.sqrt(self.dim_model)}, {tgt.dtype}")
         tgt = self.embedding_table(tgt) * math.sqrt(self.dim_model)
         tgt = self.positional_encoding(tgt)
 
@@ -80,7 +83,8 @@ class PositionalEncoding(nn.Module):
         self.register_buffer("pe", pe)
 
     def forward(self, x):
-        x = x + self.pe[: x.size(0), :]
+        x = x + self.pe[:, 0 : x.size(1), :]
+        # print(f"self.pe = {self.pe[:, 0 : x.size(1), :].shape}, x shape {x.shape}")
         return self.dropout(x)
 
 
