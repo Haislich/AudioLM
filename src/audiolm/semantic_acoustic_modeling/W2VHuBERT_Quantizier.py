@@ -1,12 +1,13 @@
 from transformers import AutoProcessor, HubertForCTC
-#from sklearn.cluster import KMeans
+
+# from sklearn.cluster import KMeans
 
 import torch
 import torchaudio
 from torch import nn
 import torchaudio.functional as F
 
-from data_preparation import AudioDataLoader
+from audiolm.data_preparation import AudioDataLoader
 
 
 from pathlib import Path
@@ -23,7 +24,7 @@ from math import ceil
 
 
 def load_checkpoint():
-    logging.getLogger('fairseq').setLevel(logging.WARNING)
+    logging.getLogger("fairseq").setLevel(logging.WARNING)
     config_path = os.getcwd() + r"/src/audiolm/semantic_acoustic_modeling/config.json"
     assert Path(config_path).exists(), f"Config file not found in {config_path}"
     with open(config_path, "r") as f:
@@ -74,7 +75,12 @@ class W2VHuBERT_Quantizier(nn.Module):
         clusters (torch.Tensor): The cluster centers used for quantization.
     """
 
-    def __init__(self, sample_frequency=16000, input_audio_hz=16000, dataloader:AudioDataLoader=None):
+    def __init__(
+        self,
+        sample_frequency=16000,
+        input_audio_hz=16000,
+        dataloader: AudioDataLoader = None,
+    ):
         super().__init__()
         self.model, self.kmeans = load_checkpoint()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -110,31 +116,35 @@ class W2VHuBERT_Quantizier(nn.Module):
                 features_only=True,
                 output_layer=self.layer,
             )["x"]
-            #print(embeddings.shape)
+            print(embeddings.shape)
             expand_cluster = self.clusters.unsqueeze(0).expand(
                 embeddings.size(0), -1, -1
             )
-            #print(expand_cluster.shape)
-            assert embeddings.size(0) == expand_cluster.size(0) and embeddings.size(2) == expand_cluster.size(2)
-            distance = -torch.cdist(embeddings, expand_cluster, p = 2)
+            # print(expand_cluster.shape)
+            assert embeddings.size(0) == expand_cluster.size(0) and embeddings.size(
+                2
+            ) == expand_cluster.size(2)
+            distance = -torch.cdist(embeddings, expand_cluster, p=2)
             quantized = distance.argmax(-1)
-            #print(quantized.shape)
+            # print(quantized.shape)
         return quantized
-
 
     def build_TokenDataset(self):
         """
 
-        Fit the quantizer to the input data and return the quantized tokens. 
+        Fit the quantizer to the input data and return the quantized tokens.
 
         Returns:
             list: List of quantized tokens.
         """
         semantic_tokens = []
-        for batch in tqdm.tqdm(self.dataloader, total=ceil(self.dataloader.__len__()/self.dataloader.batch_size)):
-            #print(batch.shape)
+        for batch in tqdm.tqdm(
+            self.dataloader,
+            total=ceil(self.dataloader.__len__() / self.dataloader.batch_size),
+        ):
+            # print(batch.shape)
             batch = batch.squeeze(1)
-            #print(batch.shape)
+            # print(batch.shape)
             batch = batch.to(self.device)
             out = self.forward(batch)
             semantic_tokens.append(out)
@@ -143,7 +153,6 @@ class W2VHuBERT_Quantizier(nn.Module):
 
 
 ##Just for test
-
 
 
 # data = "/Users/valerio/Desktop/ei/exterminationamericanbison_12_hornaday_64kb_0032.flac"
@@ -159,12 +168,14 @@ class W2VHuBERT_Quantizier(nn.Module):
 # hq.forward(audio)
 
 
-# if __name__ == "__main__":
-#     import os
-#     from audiolm.coarse_acoustic_modelling.custom_encodec import CustomEncodecModel
-#     from audiolm.data_preparation import AudioDataset, AudioDataLoader
-#     from pathlib import Path
+if __name__ == "__main__":
+    import os
+    from audiolm.data_preparation import AudioDataset, AudioDataLoader
+    from pathlib import Path
 
-#     dataloader = AudioDataLoader(os.getcwd() + "\\data\\datasets\\mini", 3)
-#     hubert = W2VHuBERT_Quantizier(dataloader=dataloader)
-#     print(hubert.fit())
+    dataloader = AudioDataLoader(
+        os.getcwd() + "\\data\\datasets\\", 1, max_length_audio=3
+    )
+    audio = next(iter(dataloader))[0]
+    hubert = W2VHuBERT_Quantizier(dataloader=dataloader)
+    print(hubert.forward(audio).shape)

@@ -7,7 +7,7 @@ import torch
 import torchaudio
 from torch.utils.data import DataLoader, Dataset
 
-from semantic_acoustic_modeling.utils import (
+from audiolm.semantic_acoustic_modeling.utils import (
     padding_audio,
     cut_audio,
 )
@@ -73,22 +73,25 @@ class AudioDataset(Dataset):
             start = 0
             while start + self.max_len < samples:
                 self.data.append((path, start, start + self.max_len))
-                start += (self.max_len - overlap)
+                start += self.max_len - overlap
             self.data.append((path, start, samples))
-
 
     def __getitem__(self, idx):
         path, start, end = self.data[idx]
-        audio, sr = torchaudio.load(path, channels_first=True, frame_offset=start, num_frames=end - start)
+        audio, sr = torchaudio.load(
+            path,
+            channels_first=True,
+            frame_offset=int(start),
+            num_frames=int(end - start),
+        )
         if sr != self.sample_frequency:
             audio = torchaudio.functional.resample(audio, sr, self.sample_frequency)
-        
+
         if audio.shape[0] > 1:
             audio = audio.mean(0, keepdim=True)
-        
+
         if audio.size(1) < self.max_len:
             audio = padding_audio(audio, self.max_len)
-        
         return audio
 
 
@@ -120,7 +123,12 @@ class AudioDataLoader(DataLoader):
             max_length_audio=max_length_audio,
             sample_frequency=sample_frequency,
         )
-        super().__init__(self.dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=self.__collate_fn)
+        super().__init__(
+            self.dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            collate_fn=self.__collate_fn,
+        )
 
     def __len__(self):
         return len(self.dataset)  # Return the length of the data list.
@@ -130,8 +138,6 @@ class AudioDataLoader(DataLoader):
         audio = torch.stack(audio)
 
         return audio
-
-
 
 
 ##just for test

@@ -8,7 +8,15 @@ from transformers import GPT2LMHeadModel
 
 
 class TransformerDecoderOnly(nn.Module):
-    def __init__(self, vocab_size, embed_dim, num_heads, layers, feedforward_dim, attn_dropout_prob):
+    def __init__(
+        self,
+        vocab_size,
+        embed_dim,
+        num_heads=16,
+        layers=12,
+        feedforward_dim=4096,
+        attn_dropout_prob=0.1,
+    ):
         super(TransformerDecoderOnly, self).__init__()
         self.vocab_size = vocab_size
         self.embed_dim = embed_dim
@@ -70,20 +78,24 @@ class PositionalEncoding(nn.Module):
         pe[:, 1::2] = torch.cos(position * div_term)
         pe = pe.unsqueeze(0)
         self.register_buffer("pe", pe)
-    
+
     def forward(self, x):
-        x = x + self.pe[:x.size(0), :]
+        x = x + self.pe[: x.size(0), :]
         return self.dropout(x)
 
 
-
-def initialize_transformer_from_gpt(initialized_model:TransformerDecoderOnly, gpt_pretrained_model:GPT2LMHeadModel):
+def initialize_transformer_from_gpt(
+    initialized_model: TransformerDecoderOnly, gpt_pretrained_model: GPT2LMHeadModel
+):
 
     d_model = gpt_pretrained_model.config.n_embd
     nhead = gpt_pretrained_model.config.n_head
     num_layers = gpt_pretrained_model.config.n_layer
-    dim_feedforward = gpt_pretrained_model.config.n_inner if gpt_pretrained_model.config.n_inner is not None else 4 * d_model
-
+    dim_feedforward = (
+        gpt_pretrained_model.config.n_inner
+        if gpt_pretrained_model.config.n_inner is not None
+        else 4 * d_model
+    )
 
     vocab_size = initialized_model.vocab_size
     initialized_model.embed_dim = d_model
@@ -91,21 +103,33 @@ def initialize_transformer_from_gpt(initialized_model:TransformerDecoderOnly, gp
     initialized_model.layers = num_layers
     initialized_model.feedforward_dim = dim_feedforward
 
-
     with torch.no_grad():
-        initialized_model.embedding_table.weight.data[:vocab_size, :] = gpt_pretrained_model.transformer.wte.weight.data[:vocab_size, :]
+        initialized_model.embedding_table.weight.data[:vocab_size, :] = (
+            gpt_pretrained_model.transformer.wte.weight.data[:vocab_size, :]
+        )
 
-        max_pos_encoding = min(initialized_model.positional_encoding.pe.size(1), gpt_pretrained_model.transformer.wpe.weight.size(0))
-        initialized_model.positional_encoding.pe.data[0, :max_pos_encoding, :] = gpt_pretrained_model.transformer.wpe.weight.data[:max_pos_encoding, :]
+        max_pos_encoding = min(
+            initialized_model.positional_encoding.pe.size(1),
+            gpt_pretrained_model.transformer.wpe.weight.size(0),
+        )
+        initialized_model.positional_encoding.pe.data[0, :max_pos_encoding, :] = (
+            gpt_pretrained_model.transformer.wpe.weight.data[:max_pos_encoding, :]
+        )
 
         for i in range(num_layers):
             decoder_layer = initialized_model.transformer_decoder.layers[i]
             gpt2_layer = gpt_pretrained_model.transformer.h[i]
 
-            decoder_layer.self_attn.in_proj_weight.data = gpt2_layer.attn.c_attn.weight.data
+            decoder_layer.self_attn.in_proj_weight.data = (
+                gpt2_layer.attn.c_attn.weight.data
+            )
             decoder_layer.self_attn.in_proj_bias.data = gpt2_layer.attn.c_attn.bias.data
-            decoder_layer.self_attn.out_proj.weight.data = gpt2_layer.attn.c_proj.weight.data
-            decoder_layer.self_attn.out_proj.bias.data = gpt2_layer.attn.c_proj.bias.data
+            decoder_layer.self_attn.out_proj.weight.data = (
+                gpt2_layer.attn.c_proj.weight.data
+            )
+            decoder_layer.self_attn.out_proj.bias.data = (
+                gpt2_layer.attn.c_proj.bias.data
+            )
 
             decoder_layer.linear1.weight.data = gpt2_layer.mlp.c_fc.weight.data
             decoder_layer.linear1.bias.data = gpt2_layer.mlp.c_fc.bias.data
@@ -117,11 +141,15 @@ def initialize_transformer_from_gpt(initialized_model:TransformerDecoderOnly, gp
             decoder_layer.norm2.weight.data = gpt2_layer.ln_2.weight.data
             decoder_layer.norm2.bias.data = gpt2_layer.ln_2.bias.data
 
-        initialized_model.fc_out.weight[:vocab_size, :] = gpt_pretrained_model.lm_head.weight.data[:vocab_size, :]
-    
+        initialized_model.fc_out.weight[:vocab_size, :] = (
+            gpt_pretrained_model.lm_head.weight.data[:vocab_size, :]
+        )
+
     print("Model initialized from GPT2")
-    print(f"Hyperparameters: d_model={d_model}, nhead={nhead}, num_layers={num_layers}, dim_feedforward={dim_feedforward}")
-    
+    print(
+        f"Hyperparameters: d_model={d_model}, nhead={nhead}, num_layers={num_layers}, dim_feedforward={dim_feedforward}"
+    )
+
     return initialized_model
 
 
