@@ -64,6 +64,44 @@ class TransformerDecoderOnly(nn.Module):
         return mask
 
 
+    def fit(self, batch):
+        #teacher forcing, shift the input by one position in order to predict the next token
+        input_token = batch[:, :-1].to(self.device)
+        target_token = batch[:, 1:].to(self.device)
+
+        self.optimizer.zero_grad()
+        #generate causal mask to prevent the model from attending to future tokens
+        causal_mask = self.generate_causal_mask(seq_len=input.size(1)).to(self.device)
+
+        #forward pass
+        #we pass the input to the DecoderOnly and the casual mask, so at time-i
+        #the model can only attend to the tokens from time 0 to i and predict the token at time i+1
+        #example:
+        # semantic_token_batch = [t1, t2, t3, t4] 
+        #input = [t1, t2, t3], target = [t2, t3, t4], causal_mask = [[1, 0, 0], [1, 1, 0], [1, 1, 1]]
+        #iteration 1: input = [t1, t2, t3] mask = [1, 0, 0] -> predict t2
+        #iteration 2: input = [t1, t2, t3] mask = [1, 1, 0] -> predict t3  
+        #iteration 3: input = [t1, t2, t3] mask = [1, 1, 1] -> predict t4
+        output = self.forward(input_token, tgt_mask=causal_mask)
+        output = output.reshape(-1, output.size(-1))
+        target_token = target_token.reshape(-1)
+        return output, target_token
+
+
+    def generate(self, prompt_ids, max_length:int, temperature:float=1.0):
+        self.eval()
+        with torch.no_grad():
+            for i in range(max_length):
+                logits = self.forward(prompt_ids)
+                logits = logits[:, -1, :] / (temperature)
+                probs = F.softmax(logits, dim=-1)
+                next_token = torch.multinomial(probs, num_samples=1) #sample from the distribution 
+                token_generated = torch.cat([prompt_ids, next_token], dim=1)
+
+            return token_generated
+
+
+
 class PositionalEncoding(nn.Module):
     def __init__(self, dim_model, dropout=0.1, max_len=5000):
         super(PositionalEncoding, self).__init__()
@@ -82,6 +120,7 @@ class PositionalEncoding(nn.Module):
     def forward(self, x):
         x = x + self.pe[: x.size(0), :]
         return self.dropout(x)
+
 
 
 def initialize_transformer_from_gpt(
