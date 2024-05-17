@@ -62,7 +62,7 @@ class AudioDataset(Dataset):
         Returns:
             list: List of preprocessed audio tensors.
         """
-        overlap = 0.001 * self.max_len
+        overlap = 1 * self.sample_frequency
         for path in self.path_audios:
             # Load the audio file and its sample rate, resampling it if necessary
             audio, sr = torchaudio.load(path, channels_first=True)
