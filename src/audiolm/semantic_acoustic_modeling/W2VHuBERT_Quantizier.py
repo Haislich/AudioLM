@@ -108,7 +108,7 @@ class W2VHuBERT_Quantizier(nn.Module):
             )
         if input_audio.dim() == 3:
             input_audio = input_audio.squeeze(1)
-        print(input_audio.shape)
+        # print(input_audio.shape)
         with torch.no_grad():
             embeddings = self.model(
                 input_audio,
@@ -116,7 +116,7 @@ class W2VHuBERT_Quantizier(nn.Module):
                 features_only=True,
                 output_layer=self.layer,
             )["x"]
-            print(embeddings.shape)
+            # print(embeddings.shape)
             expand_cluster = self.clusters.unsqueeze(0).expand(
                 embeddings.size(0), -1, -1
             )
@@ -168,14 +168,14 @@ class W2VHuBERT_Quantizier(nn.Module):
 # hq.forward(audio)
 
 
-if __name__ == "__main__":
-    import os
-    from audiolm.data_preparation import AudioDataset, AudioDataLoader
-    from pathlib import Path
+# if __name__ == "__main__":
+#     import os
+#     from audiolm.data_preparation import AudioDataset, AudioDataLoader
+#     from pathlib import Path
 
-    dataloader = AudioDataLoader(
-        os.getcwd() + "\\data\\datasets\\", 1, max_length_audio=3
-    )
-    audio = next(iter(dataloader))[0]
-    hubert = W2VHuBERT_Quantizier(dataloader=dataloader)
-    print(hubert.forward(audio).shape)
+#     dataloader = AudioDataLoader(
+#         os.getcwd() + "\\data\\datasets\\", 1, max_length_audio=3
+#     )
+#     audio = next(iter(dataloader))[0]
+#     hubert = W2VHuBERT_Quantizier(dataloader=dataloader)
+#     print(hubert.forward(audio).shape)

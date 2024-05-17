@@ -49,7 +49,7 @@ class CustomEncodecModel(nn.Module):
                 encoded_frames = self.model.encode(batch.unsqueeze(0), bandwidth=6)
                 # Remove the useless dimensions
                 codes = encoded_frames.audio_codes.squeeze((0, 1))
-                print(codes.shape)
+
                 num_quantizers, num_tokens = codes.shape
                 fine_quantizers = num_quantizers - coarse_quantizers
                 coarse_codes, fine_codes = codes.split(
@@ -62,8 +62,7 @@ class CustomEncodecModel(nn.Module):
                 fine_codes = fine_codes.T.reshape(fine_quantizers * num_tokens)
                 fine.append(fine_codes)
                 audio_scales.append(encoded_frames.audio_scales)
-                break
-        return coarse, fine, audio_scales
+        return (torch.stack(coarse), torch.stack(fine), audio_scales)
 
     # https://github.com/huggingface/transformers/blob/e0c3cee17085914bbe505c159beeb8ae39bc37dd/src/transformers/models/encodec/modeling_encodec.py#L708
     def decode(
@@ -87,6 +86,6 @@ if __name__ == "__main__":
     print(len(dataloader))
     for batch in dataloader:
         res = model.encode(batch)
-        print(res[0][0].shape, res[1][0].shape)
+        res[0][0].shape, res[1][0].shape
+        print(torch.Tensor(res[0][0]))
         break
-        # print(torch.max(res[0][0]), res[1][0])
