@@ -10,9 +10,9 @@ import torch
 from torch import nn
 
 from audiolm.data_preparation import AudioDataLoader
-from audiolm.semantic_acoustic_modeling.W2VHuBERT_Quantizier import W2VHuBERT_Quantizier
-from audiolm.transformer.AbsoluteTransformer import TransformerDecoderOnly
-from audiolm.transformer.trainer import SemanticTrainer, AcousticTrainer
+from audiolm.w2v_hubert import W2VHuBERT_Quantizier
+from audiolm.absolute_transformer import TransformerDecoderOnly
+from audiolm.trainer import SemanticTrainer, AcousticTrainer
 from audiolm.custom_encodec import CustomEncodecModel
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -94,8 +94,8 @@ class TestAcousticEncoder(unittest.TestCase):
         save_path = Path(os.getcwd() + "\\data\\models")
         early_stop_counter = 10
         early_stopping_range = 10
-        epochs = 2
-        semantic_trainer = AcousticTrainer(
+        epochs = 1
+        acoustic_trainer = AcousticTrainer(
             semantic_encoder=semantic_encoder,
             semantic_transformer=semantic_transformer,
             acoustic_enc_dec=acoustic_enc_dec,
@@ -112,7 +112,7 @@ class TestAcousticEncoder(unittest.TestCase):
             epochs=epochs,
         )
 
-        semantic_trainer.train()
+        acoustic_trainer.train()
 
 
 if __name__ == "__main__":

@@ -13,8 +13,8 @@ from tqdm.auto import tqdm
 from audiolm.custom_encodec import CustomEncodecModel
 from audiolm.costants import DEVICE, DEBUG
 from audiolm.data_preparation import AudioDataLoader
-from audiolm.semantic_acoustic_modeling.W2VHuBERT_Quantizier import W2VHuBERT_Quantizier
-from audiolm.transformer.AbsoluteTransformer import TransformerDecoderOnly
+from audiolm.w2v_hubert import W2VHuBERT_Quantizier
+from audiolm.absolute_transformer import TransformerDecoderOnly
 
 # TODO Fix docstrings.
 

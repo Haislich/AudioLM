@@ -115,7 +115,7 @@ class TransformerDecoderOnly(nn.Module):
     def generate(self, prompt_ids, max_length: int, temperature: float = 1.0):
         self.eval()
         with torch.no_grad():
-            for i in range(max_length):
+            for _ in range(max_length):
                 logits = self.forward(prompt_ids)
                 logits = logits[:, -1, :] / (temperature)
                 probs = F.softmax(logits, dim=-1)

@@ -4,13 +4,16 @@ import os
 from pathlib import Path
 
 import torch
+import torch.nn.functional as F
 import torchaudio
 from torch.utils.data import DataLoader, Dataset
 
-from audiolm.semantic_acoustic_modeling.utils import (
-    padding_audio,
-    cut_audio,
-)
+
+def padding_audio(audio, max_len):
+    padding = max_len - audio.size(1)
+    audio = F.pad(audio, (0, padding), "constant", 0)
+    return audio
+
 
 # TODO: Necessaria la attention mask per il transformer??
 
@@ -138,15 +141,3 @@ class AudioDataLoader(DataLoader):
         audio = torch.stack(audio)
 
         return audio
-
-
-##just for test
-
-
-# data = "/Users/valerio/Desktop/ei"
-
-# a = AudioDataLoader(data_path=data, batch_size=5, shuffle=False, max_length_audio=3)
-# # dataloader = a.return_DataLoader()
-# print(a.__len__())
-# for batch in a:
-#     print(batch.shape)

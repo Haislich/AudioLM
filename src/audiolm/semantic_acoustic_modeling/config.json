@@ -1,6 +1,0 @@
-{
-    "checkpoint_path": "C:\\Users\\josed\\Documents\\AudioLM\\data\\hubert_checkpoints\\hubert_base_ls960.pt",
-    "quantizier_path": "C:\\Users\\josed\\Documents\\AudioLM\\data\\hubert_checkpoints\\hubert_base_ls960_L9_km500.bin",
-    "n_init": 5,
-    "kmeans_verbose": 1
-}

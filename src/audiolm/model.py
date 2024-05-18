@@ -1,10 +1,12 @@
-from torch import nn
-import torch
-from audiolm.semantic_acoustic_modeling.W2VHuBERT_Quantizier import W2VHuBERT_Quantizier
-from audiolm.custom_encodec import CustomEncodecModel
 import os
+
+import torch
+from torch import nn
+
+from audiolm.absolute_transformer import TransformerDecoderOnly
+from audiolm.custom_encodec import CustomEncodecModel
 from audiolm.data_preparation import AudioDataLoader
-from audiolm.transformer.AbsoluteTransformer import TransformerDecoderOnly
+from audiolm.w2v_hubert import W2VHuBERT_Quantizier
 
 
 class AudioLM(nn.Module):
