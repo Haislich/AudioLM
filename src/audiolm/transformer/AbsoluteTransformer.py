@@ -6,6 +6,8 @@ import math
 
 from transformers import GPT2LMHeadModel
 
+from audiolm.costants import DEBUG
+
 
 class TransformerDecoderOnly(nn.Module):
     def __init__(
@@ -35,6 +37,7 @@ class TransformerDecoderOnly(nn.Module):
             nhead=num_heads,
             dim_feedforward=feedforward_dim,
             dropout=attn_dropout_prob,
+            batch_first=True,
         )
         self.transformer_decoder = nn.TransformerDecoder(
             decoder_layer=decoder_layer,
@@ -52,18 +55,25 @@ class TransformerDecoderOnly(nn.Module):
 
         if memory is None:
             memory = tgt
-
+        print(f"tgt shape: {tgt.shape}" if DEBUG else "")
+        # print(
+        #     f"tgt_key_padding_mask shape: {tgt_key_padding_mask.shape}" if DEBUG else ""
+        # )
+        # tgt_mask = torch.triu(torch.ones((2, 149)), diagonal=1).bool()
         output = self.transformer_decoder(
             tgt,
             memory,
             tgt_mask=tgt_mask,
             tgt_key_padding_mask=tgt_key_padding_mask,
         )
+
         output = self.fc_out(output)
         return output
 
-    def generate_causal_mask(self, seq_len=149):
+    def generate_causal_mask(self, seq_len=None):
+        assert seq_len, "se_len cannot be None"
         mask = torch.triu(torch.ones((seq_len, seq_len)), diagonal=1).bool()
+        # mask = mask.unsqueeze(0).repeat((2, 1, 1))
         return mask
 
     def fit(self, batch):
@@ -85,9 +95,21 @@ class TransformerDecoderOnly(nn.Module):
         # iteration 1: input = [t1, t2, t3] mask = [1, 0, 0] -> predict t2
         # iteration 2: input = [t1, t2, t3] mask = [1, 1, 0] -> predict t3
         # iteration 3: input = [t1, t2, t3] mask = [1, 1, 1] -> predict t4
+        print(f"input_token.size(1): {input_token.size(1)}" if DEBUG else "")
+        print(f"causal_mask shape: {causal_mask.shape}" if DEBUG else "")
+
         output = self.forward(input_token, tgt_mask=causal_mask)
-        output = output.reshape(-1, output.size(-1))
+        print(
+            f"target.shape , output.shape prima del reshape: {target_token.shape}, {output.shape},"
+        )
+        output = output.view(-1, output.size(-1))
         target_token = target_token.reshape(-1)
+        print(
+            f"target.shape , output.shape dopo il reshape: {target_token.shape}, {output.shape},"
+        )
+
+        # output = output.reshape(-1, output.size(-1))
+        # target_token = target_token.reshape(-1)
         return output, target_token
 
     def generate(self, prompt_ids, max_length: int, temperature: float = 1.0):

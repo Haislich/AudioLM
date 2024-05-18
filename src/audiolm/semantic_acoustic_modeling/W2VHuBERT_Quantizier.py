@@ -1,52 +1,82 @@
-from transformers import AutoProcessor, HubertForCTC
-
-# from sklearn.cluster import KMeans
-
-import torch
-import torchaudio
-from torch import nn
-import torchaudio.functional as F
-
-from audiolm.data_preparation import AudioDataLoader
-
-
-from pathlib import Path
-import json
-import os
-import tqdm
-import fairseq
-from sklearn.cluster import KMeans
-import joblib
 import logging
+import os
 from math import ceil
 
-##Utils functions
+import fairseq
+import joblib
+import requests
+import torch
+import torchaudio.functional as F
+from torch import nn
+from tqdm.auto import tqdm
+
+from audiolm.costants import CACHE_PATH
+from audiolm.data_preparation import AudioDataLoader
+
+# region: Utils functions
+
+logging.getLogger("fairseq").setLevel(logging.CRITICAL)
 
 
 def load_checkpoint():
-    logging.getLogger("fairseq").setLevel(logging.WARNING)
-    config_path = os.getcwd() + r"/src/audiolm/semantic_acoustic_modeling/config.json"
-    assert Path(config_path).exists(), f"Config file not found in {config_path}"
-    with open(config_path, "r") as f:
-        config = json.load(f)
-        checkpoint_path = config["checkpoint_path"]
-        quantizier_path = config["quantizier_path"]
-    if not os.path.exists("./cache"):
-        os.makedirs("./cache")
-    try:
-        torch_check = torch.load(checkpoint_path)
-        models, _, _ = fairseq.checkpoint_utils.load_model_ensemble_and_task(
-            {checkpoint_path: torch_check}
-        )
-        model = models[0]
-        print("Modello caricato")
-    except Exception as e:
-        raise Exception(f"An error occurred while trying to load the model: {e}")
-    try:
-        kmeans = joblib.load(quantizier_path)
-        print("Kmeans caricato")
-    except Exception as e:
-        raise Exception(f"An error occurred while trying to load Kmeans: {e}")
+
+    checkpoint_path = CACHE_PATH / "W2V_Hubert" / "model"
+    if not checkpoint_path.exists():
+        os.makedirs(checkpoint_path)
+    checkpoint = checkpoint_path / "hubert_base_ls960.pt"
+    if not checkpoint.exists():
+        with requests.get(
+            r"https://dl.fbaipublicfiles.com/hubert/hubert_base_ls960.pt",
+            stream=True,
+            timeout=30,
+        ) as response:
+            response.raise_for_status()
+            # Display a progress bar to get the sense how the download is going
+            with tqdm(
+                desc="Downloading W2V_Hubert checkpoint.",
+                total=int(response.headers.get("content-length", 0)),
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as progress_bar:
+                with open(checkpoint, mode="wb") as file:
+                    for chunk in response.iter_content(chunk_size=8196):
+                        progress_bar.update(len(chunk))
+                        file.write(chunk)
+
+    quantizer_path = CACHE_PATH / "W2V_Hubert" / "quantizer"
+    if not quantizer_path.exists():
+        os.makedirs(quantizer_path)
+
+    quantizer = quantizer_path / "hubert_base_ls960_L9_km500.bin"
+    if not quantizer.exists():
+        with requests.get(
+            r"https://dl.fbaipublicfiles.com/hubert/hubert_base_ls960_L9_km500.bin",
+            stream=True,
+            timeout=30,
+        ) as response:
+            response.raise_for_status()
+            # Display a progress bar to get the sense how the download is going
+            with tqdm(
+                desc="Downloading W2V_Hubert quantizer.",
+                total=int(response.headers.get("content-length", 0)),
+                unit="B",
+                unit_scale=True,
+                unit_divisor=1024,
+            ) as progress_bar:
+                with open(quantizer, mode="wb") as file:
+                    for chunk in response.iter_content(chunk_size=8196):
+                        progress_bar.update(len(chunk))
+                        file.write(chunk)
+
+    torch_check = torch.load(checkpoint)
+    models, _, _ = fairseq.checkpoint_utils.load_model_ensemble_and_task(
+        {str(checkpoint): torch_check}
+    )
+    model = models[0]
+    print("Modello caricato")
+    kmeans = joblib.load(quantizer)
+    print("Kmeans caricato")
 
     return model, kmeans
 
@@ -86,7 +116,6 @@ class W2VHuBERT_Quantizier(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model.to(self.device)
         self.dataloader = dataloader
-        self.model.eval()
         self.sample_frequency = sample_frequency
         self.input_audio_hz = input_audio_hz
         self.layer = 6
@@ -138,9 +167,9 @@ class W2VHuBERT_Quantizier(nn.Module):
             list: List of quantized tokens.
         """
         semantic_tokens = []
-        for batch in tqdm.tqdm(
+        for batch in tqdm(
             self.dataloader,
-            total=ceil(self.dataloader.__len__() / self.dataloader.batch_size),
+            total=ceil(len(self.dataloader) / self.dataloader.batch_size),
         ):
             # print(batch.shape)
             batch = batch.squeeze(1)
@@ -150,32 +179,3 @@ class W2VHuBERT_Quantizier(nn.Module):
             semantic_tokens.append(out)
 
         return semantic_tokens
-
-
-##Just for test
-
-
-# data = "/Users/valerio/Desktop/ei/exterminationamericanbison_12_hornaday_64kb_0032.flac"
-# audio, sr = torchaudio.load(data)
-
-# print("Ecco l'audio: ", audio.shape)
-
-# #audio = audio.unsqueeze(0) #Simulo la batch size
-# #print("Ecco l'audio ora: ", audio.shape)
-
-# hq = W2VHuBERT_Quantizier(sr, sr)
-
-# hq.forward(audio)
-
-
-# if __name__ == "__main__":
-#     import os
-#     from audiolm.data_preparation import AudioDataset, AudioDataLoader
-#     from pathlib import Path
-
-#     dataloader = AudioDataLoader(
-#         os.getcwd() + "\\data\\datasets\\", 1, max_length_audio=3
-#     )
-#     audio = next(iter(dataloader))[0]
-#     hubert = W2VHuBERT_Quantizier(dataloader=dataloader)
-#     print(hubert.forward(audio).shape)

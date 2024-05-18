@@ -19,6 +19,7 @@ class CustomEncodecModel(nn.Module):
         """
         super().__init__()
         self.model = EncodecModel.from_pretrained("facebook/encodec_24khz")
+        print()
 
     def forward(self, *_, **__) -> torch.Tensor:
         """
@@ -73,19 +74,3 @@ class CustomEncodecModel(nn.Module):
     ):
         """Decodes the given frames into an output audio waveform."""
         return self.model.encode(audio_codes, audio_scales, padding_mask, None)
-
-
-if __name__ == "__main__":
-    import os
-    from audiolm.data_preparation import AudioDataLoader
-
-    dataloader = AudioDataLoader(
-        os.getcwd() + "\\data\\datasets\\", 2, max_length_audio=3
-    )
-    model = CustomEncodecModel()
-    print(len(dataloader))
-    for batch in dataloader:
-        res = model.encode(batch)
-        res[0][0].shape, res[1][0].shape
-        print(torch.Tensor(res[0][0]))
-        break

@@ -1,7 +1,7 @@
 from torch import nn
 import torch
 from audiolm.semantic_acoustic_modeling.W2VHuBERT_Quantizier import W2VHuBERT_Quantizier
-from audiolm.acoustic_modelling.custom_encodec import CustomEncodecModel
+from audiolm.custom_encodec import CustomEncodecModel
 import os
 from audiolm.data_preparation import AudioDataLoader
 from audiolm.transformer.AbsoluteTransformer import TransformerDecoderOnly
@@ -45,9 +45,6 @@ class AudioLM(nn.Module):
     def forward(self, x: torch.Tensor):
         # region Semantic Modelling
         semantic_token = self.semantic_encoder(x)
-        transformer_input = semantic_token_batch[:, :-1].to(self.device)
-        target = semantic_token_batch[:, 1:].to(self.device)
-        casual_mask = self.semantic_transformer.generate_causal_mask(seq_len=x.size(1))
         semantic_modelling = self.semantic_transformer(semantic_token)
         # endregion
 

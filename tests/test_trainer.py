@@ -13,14 +13,14 @@ from audiolm.data_preparation import AudioDataLoader
 from audiolm.semantic_acoustic_modeling.W2VHuBERT_Quantizier import W2VHuBERT_Quantizier
 from audiolm.transformer.AbsoluteTransformer import TransformerDecoderOnly
 from audiolm.transformer.trainer import SemanticTrainer, AcousticTrainer
-from audiolm.acoustic_modelling.custom_encodec import CustomEncodecModel
+from audiolm.custom_encodec import CustomEncodecModel
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 torch.set_warn_always(False)
 
 
 class TestSemanticEncoder(unittest.TestCase):
-    def test_end2end(self):
+    def test_train_end2end(self):
         """Test if the pipeline generate a single emebeding"""
         print("===========================================")
         print("End to end Pipeline for semantic modelling.")
@@ -64,7 +64,7 @@ class TestSemanticEncoder(unittest.TestCase):
 
 
 class TestAcousticEncoder(unittest.TestCase):
-    def train_end2end(self):
+    def test_train_end2end(self):
         """Test if the pipeline generate a single emebeding"""
         print("===========================================")
         print("End to end Pipeline for coarse acoustic training.")
@@ -79,7 +79,7 @@ class TestAcousticEncoder(unittest.TestCase):
         )
         acoustic_enc_dec = CustomEncodecModel()
         print("Created semantic transformer.")
-        acoustic_transfomer = TransformerDecoderOnly(
+        acoustic_transformer = TransformerDecoderOnly(
             1024,  # Valore massimo del quantizzatore
             1024,  # Numero arbitratio
         )
@@ -94,7 +94,7 @@ class TestAcousticEncoder(unittest.TestCase):
         save_path = Path(os.getcwd() + "\\data\\models")
         early_stop_counter = 10
         early_stopping_range = 10
-        epochs = 10
+        epochs = 2
         semantic_trainer = AcousticTrainer(
             semantic_encoder=semantic_encoder,
             semantic_transformer=semantic_transformer,

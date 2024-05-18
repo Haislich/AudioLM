@@ -10,7 +10,7 @@ import torch
 from torch import nn
 from tqdm.auto import tqdm
 
-from audiolm.acoustic_modelling.custom_encodec import CustomEncodecModel
+from audiolm.custom_encodec import CustomEncodecModel
 from audiolm.costants import DEVICE, DEBUG
 from audiolm.data_preparation import AudioDataLoader
 from audiolm.semantic_acoustic_modeling.W2VHuBERT_Quantizier import W2VHuBERT_Quantizier
@@ -22,8 +22,6 @@ from audiolm.transformer.AbsoluteTransformer import TransformerDecoderOnly
 class Trainer(ABC):
     """
     Trainer class for training a Transformer model.
-
-
     """
 
     @abstractmethod
@@ -124,21 +122,21 @@ class Trainer(ABC):
                 batch = batch.to(DEVICE)
                 print(f"Batch moved to device: {DEVICE}" if DEBUG else "")
 
-                output, target = self.loss_generator(batch)
-                print(
-                    f"Generate output: {output.shape} and target:{target.shape}"
-                    if DEBUG
-                    else ""
-                )
-
-                loss = self.loss(target, output)
+                # output, target = self.loss_generator(batch)
+                # print(
+                #     f"Generate output: {output.shape} and target:{target.shape}"
+                #     if DEBUG
+                #     else ""
+                # )
+                # loss = self.loss(output, target)
+                loss = self.loss_generator(batch)
                 print(f"Loss: {loss.item()}" if DEBUG else "")
 
                 epoch_loss += loss.item()
 
                 self.optimizer.zero_grad()
 
-                self.loss.backward()
+                loss.backward()
                 print("Loss backward" if DEBUG else "")
 
                 self.optimizer.step()
@@ -262,6 +260,7 @@ class Trainer(ABC):
     # endregion
 
 
+# pylint: disable =too-many-arguments
 class SemanticTrainer(Trainer):
     """Trainer class derived from `Trainer`."""
 
@@ -330,7 +329,15 @@ class SemanticTrainer(Trainer):
 
     def loss_generator(self, batch):
         semantic_encode = self.semantic_encoder(batch)
-        return self.semantic_transformer.fit(semantic_encode)
+        print(f"semantic_encode shape: {semantic_encode.shape}" if DEBUG else "")
+        output, target = self.semantic_transformer.fit(semantic_encode)
+        print(
+            f"Generate output: {output.shape} and target:{target.shape}"
+            if DEBUG
+            else ""
+        )
+        loss = self.loss(output, target)
+        return loss
 
     def train(self):
         return self._train(self.semantic_transformer)
@@ -351,6 +358,7 @@ class SemanticTrainer(Trainer):
         return self._save_model(self.semantic_transformer)
 
 
+# pylint: disable =too-many-arguments
 class AcousticTrainer(Trainer):
     """Trainer class derived from `Trainer`."""
 
@@ -424,11 +432,22 @@ class AcousticTrainer(Trainer):
     def loss_generator(self, batch):
         # TODO: Finish, but wait for valerio.
         semantic_encode = self.semantic_encoder(batch)
-        semantic_token = self.semantic_transformer(semantic_encode)
-        acoustic_tokens = self.acoustic_enc_dec.encode(batch)
-        conditioning = torch.cat((semantic_token, acoustic_tokens), dim=1)
+        semantic_token = self.semantic_transformer.generate(semantic_encode, 3)
 
-        return self.acoustic_transformer.fit(conditioning)
+        coarse_acoustic_tokens, _, _ = self.acoustic_enc_dec.encode(batch)
+        print(f"shape coarse_acoustic: {coarse_acoustic_tokens.shape}")
+        print(f"shape semantic_token: {semantic_token.shape}")
+
+        conditioning = torch.cat((semantic_token, coarse_acoustic_tokens), dim=1)
+
+        output, target = self.acoustic_transformer.fit(conditioning)
+        print(
+            f"Generate output: {output.shape} and target:{target.shape}"
+            if DEBUG
+            else ""
+        )
+        loss = self.loss(output, target)
+        return loss
 
     def train(self):
         return self._train(self.acoustic_transformer)
