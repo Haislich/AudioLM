@@ -10,12 +10,13 @@ import torchaudio.functional as F
 from torch import nn
 from tqdm.auto import tqdm
 
-from audiolm.costants import CACHE_PATH
+from audiolm.constants import CACHE_PATH
 from audiolm.data_preparation import AudioDataLoader
 
 # region: Utils functions
 
 logging.getLogger("fairseq").setLevel(logging.CRITICAL)
+logging.getLogger("pytorch").setLevel(logging.CRITICAL)
 
 
 def load_checkpoint():

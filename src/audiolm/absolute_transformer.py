@@ -1,12 +1,9 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
-import math
-
 from transformers import GPT2LMHeadModel
-
-from audiolm.costants import DEBUG
 
 
 class TransformerDecoderOnly(nn.Module):
@@ -48,18 +45,12 @@ class TransformerDecoderOnly(nn.Module):
         self.fc_out = nn.Linear(embed_dim, vocab_size)
 
     def forward(self, tgt, memory=None, tgt_mask=None, tgt_key_padding_mask=None):
-
-        print(f"tgt:{tgt.shape},  {math.sqrt(self.dim_model)}, {tgt.dtype}")
         tgt = self.embedding_table(tgt) * math.sqrt(self.dim_model)
         tgt = self.positional_encoding(tgt)
 
         if memory is None:
             memory = tgt
-        print(f"tgt shape: {tgt.shape}" if DEBUG else "")
-        # print(
-        #     f"tgt_key_padding_mask shape: {tgt_key_padding_mask.shape}" if DEBUG else ""
-        # )
-        # tgt_mask = torch.triu(torch.ones((2, 149)), diagonal=1).bool()
+
         output = self.transformer_decoder(
             tgt,
             memory,
@@ -95,21 +86,12 @@ class TransformerDecoderOnly(nn.Module):
         # iteration 1: input = [t1, t2, t3] mask = [1, 0, 0] -> predict t2
         # iteration 2: input = [t1, t2, t3] mask = [1, 1, 0] -> predict t3
         # iteration 3: input = [t1, t2, t3] mask = [1, 1, 1] -> predict t4
-        print(f"input_token.size(1): {input_token.size(1)}" if DEBUG else "")
-        print(f"causal_mask shape: {causal_mask.shape}" if DEBUG else "")
 
         output = self.forward(input_token, tgt_mask=causal_mask)
-        print(
-            f"target.shape , output.shape prima del reshape: {target_token.shape}, {output.shape},"
-        )
+
         output = output.view(-1, output.size(-1))
         target_token = target_token.reshape(-1)
-        print(
-            f"target.shape , output.shape dopo il reshape: {target_token.shape}, {output.shape},"
-        )
 
-        # output = output.reshape(-1, output.size(-1))
-        # target_token = target_token.reshape(-1)
         return output, target_token
 
     def generate(self, prompt_ids, max_length: int, temperature: float = 1.0):
@@ -144,8 +126,28 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x):
         x = x + self.pe[:, 0 : x.size(1), :]
-        # print(f"self.pe = {self.pe[:, 0 : x.size(1), :].shape}, x shape {x.shape}")
         return self.dropout(x)
+
+
+class SemanticTransformer(TransformerDecoderOnly):
+    """Specialized form of TransformerDecoderOnly for Semantic transformations."""
+
+    def __init__(self):
+        super().__init__(500, 768)
+
+
+class CoarseAcousticTransformer(TransformerDecoderOnly):
+    """Specialized form of TransformerDecoderOnly for Coarse Acoustic transformations."""
+
+    def __init__(self):
+        super().__init__(1024, 1024)
+
+
+class FineAcousticTransformer(TransformerDecoderOnly):
+    """Specialized form of TransformerDecoderOnly for Fine Acoustic transformations."""
+
+    def __init__(self):
+        super().__init__(1024, 1024)
 
 
 def initialize_transformer_from_gpt(
@@ -215,10 +217,3 @@ def initialize_transformer_from_gpt(
     )
 
     return initialized_model
-
-
-# Example usage
-
-# gpt2_model = GPT2LMHeadModel.from_pretrained('gpt2')
-
-# initialize_transformer_from_gpt(TransformerDecoderOnly(500, 768, 12, 12, 3072, 0.1), gpt2_model)

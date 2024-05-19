@@ -19,7 +19,6 @@ class CustomEncodecModel(nn.Module):
         """
         super().__init__()
         self.model = EncodecModel.from_pretrained("facebook/encodec_24khz")
-        print()
 
     def forward(self, *_, **__) -> torch.Tensor:
         """

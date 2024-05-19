@@ -3,20 +3,24 @@ import os
 import torch
 from torch import nn
 
-from audiolm.absolute_transformer import TransformerDecoderOnly
+from audiolm.absolute_transformer import (
+    SemanticTransformer,
+    CoarseAcousticTransformer,
+    FineAcousticTransformer,
+)
 from audiolm.custom_encodec import CustomEncodecModel
 from audiolm.data_preparation import AudioDataLoader
 from audiolm.w2v_hubert import W2VHuBERT_Quantizier
 
 
-class AudioLM(nn.Module):
+class AudioLM:
     def __init__(
         self,
         semantic_encoder: W2VHuBERT_Quantizier,
-        semantic_transformer,
-        acoustic_encoder: CustomEncodecModel,
-        acoustic_transformer,
-        fine_transformer,
+        semantic_transformer: SemanticTransformer,
+        acoustic_encoder_decoder: CustomEncodecModel,
+        coarse_acoustic_transformer: CoarseAcousticTransformer,
+        fine_acoustic_transformer: FineAcousticTransformer,
         # https://stackoverflow.com/a/53797072
         *,
         audio_len=3,
@@ -37,59 +41,69 @@ class AudioLM(nn.Module):
         self.semantic_encoder = semantic_encoder
         for param in self.semantic_encoder.model.parameters():
             param.requires_grad = False
-        self.acoustic_encoder = acoustic_encoder
-        for param in self.acoustic_encoder.model.parameters():
+        self.acoustic_encoder_decoder = acoustic_encoder_decoder
+        for param in self.acoustic_encoder_decoder.model.parameters():
             param.requires_grad = False
         self.semantic_transformer = semantic_transformer
-        self.acoustic_transformer = acoustic_transformer
-        self.fine_transformer = fine_transformer
+        self.coarse_acoustic_transformer = coarse_acoustic_transformer
+        self.fine_acoustic_transformer = fine_acoustic_transformer
+        self.audio_len = audio_len
+        self.n_coarse_quantizers = n_coarse_quantizers
+        self.n_fine_quantizers = n_fine_quantizers
 
-    def forward(self, x: torch.Tensor):
-        # region Semantic Modelling
-        semantic_token = self.semantic_encoder(x)
-        semantic_modelling = self.semantic_transformer(semantic_token)
-        # endregion
-
-        # region Coarse Acoustic Modelling
-        coarse_acoustic_token, fine_acoustic_token, audio_scales = (
-            self.acoustic_encoder.encode(x)
+    def inference(self, x: torch.Tensor):
+        # Add dimension at the beginning to simulate being a batch
+        # to conform with the rest of the API
+        x = x.unsqueeze(0)
+        semantic_encode = self.semantic_encoder(x)
+        semantic_token = self.semantic_transformer.generate(
+            semantic_encode, self.audio_len
         )
 
-        conditioning = torch.cat((semantic_modelling, coarse_acoustic_token), dim=1)
-        coarse_acoustic_modelling = self.acoustic_transformer(
-            conditioning.type(torch.int64)
+        coarse_acoustic_tokens, fine_acoustic_tokens, _ = (
+            self.acoustic_encoder_decoder.encode(x, self.n_coarse_quantizers)
         )
-        # endregion
-
-        # region Fine Acoustic modelling
-        fine_acoustic_token = torch.Tensor(fine_acoustic_token)
-        conditioning = torch.cat((coarse_acoustic_modelling, fine_acoustic_token))
-        fine_acoustic_modelling = self.fine_transformer(conditioning, audio_scales)
-        # endregion
-        out = self.acoustic_encoder.decode(
-            fine_acoustic_modelling,
+        coarse_conditioning = torch.cat((semantic_token, coarse_acoustic_tokens), dim=1)
+        coarse_tokens = self.coarse_acoustic_transformer.generate(
+            coarse_conditioning, 3
         )
-        return out
 
+        output = self.fine_acoustic_transformer.generate(
+            torch.cat((coarse_tokens, fine_acoustic_tokens), dim=1)
+        )
 
-def pipeline():
-    dataloader = AudioDataLoader(
-        os.getcwd() + "\\data\\datasets\\", 2, max_length_audio=3
-    )
-    hubert = W2VHuBERT_Quantizier()
-    semantic_transformer = TransformerDecoderOnly(
-        500,  # Valore massimo del quantizzatore
-        768,  # Numero arbitratio
-    )
-    encodec = CustomEncodecModel()
-    acoustic_transfomer = TransformerDecoderOnly(
-        1024,  # Valore massimo del quantizzatore
-        1024,  # Numero arbitratio
-    )
-    fine_transformer = TransformerDecoderOnly(1024, 1024)
-    return AudioLM(
-        hubert, semantic_transformer, encodec, acoustic_transfomer, fine_transformer
-    )(next(iter(dataloader)))
+        return output
 
+    def from_pretrained():
 
-print(pipeline())
+        semantic_encoder = W2VHuBERT_Quantizier()
+        semantic_transformer = SemanticTransformer(
+            500,  # Valore massimo del quantizzatore
+            768,  # Numero arbitratio
+        )
+        dataloader = AudioDataLoader(os.getcwd() + "\\..\\data\\datasets", batch_size=1)
+        loss = nn.CrossEntropyLoss()
+        optimizer = torch.optim.Adam(semantic_transformer.parameters(), lr=0.001)
+        intervals = 10
+        save_path = Path(os.getcwd() + "\\..\\data\\")
+        early_stop_counter = 10
+        early_stopping_range = 10
+        epochs = 1
+        semantic_trainer = SemanticTrainer(
+            semantic_encoder=semantic_encoder,
+            semantic_transformer=semantic_transformer,
+            train_dataloader=dataloader,
+            val_dataloader=dataloader,
+            test_dataloader=dataloader,
+            loss=loss,
+            optimizer=optimizer,
+            intervals=intervals,
+            save_path=save_path,
+            early_stop_counter=early_stop_counter,
+            early_stopping_range=early_stopping_range,
+            epochs=epochs,
+        )
+
+        semantic_trainer.train()
+
+    # def pipeline()
