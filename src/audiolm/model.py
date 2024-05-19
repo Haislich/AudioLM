@@ -56,19 +56,28 @@ class AudioLM:
             semantic_encode, self.audio_len
         )
 
-        coarse_acoustic_tokens, fine_acoustic_tokens, _ = (
-            self.acoustic_encoder_decoder.encode(x, self.n_coarse_quantizers)
+        coarse_acoustic_tokens, fine_acoustic_tokens, audio_scales = (
+            self.acoustic_encoder_decoder.encode(x)
         )
         coarse_conditioning = torch.cat((semantic_token, coarse_acoustic_tokens), dim=1)
         coarse_tokens = self.coarse_acoustic_transformer.generate(
             coarse_conditioning, 3
         )
+        print(f"Coarse conditioning {coarse_tokens.shape}")
+        if self.fine_acoustic_transformer:
+            fine_acoustic_tokens = self.fine_acoustic_transformer.generate(
+                torch.cat((coarse_tokens, fine_acoustic_tokens), dim=1), 4
+            )
+            output = self.acoustic_encoder_decoder.decode(
+                fine_acoustic_tokens.unsqueeze(0), None
+            )
+        else:
+            print(coarse_tokens.shape)
 
-        output = self.fine_acoustic_transformer.generate(
-            torch.cat((coarse_tokens, fine_acoustic_tokens), dim=1)
-        )
-
-        return output
+            output = self.acoustic_encoder_decoder.decode(
+                coarse_tokens.unsqueeze(0).unsqueeze(0), [None]
+            )
+        return output["audio_values"]
 
     @staticmethod
     def from_pretrained(
@@ -82,7 +91,6 @@ class AudioLM:
         )
         semantic_transformer.load_state_dict(state_dict)
         acoustic_encoder_decoder = Encodec()
-        print("Instantiated pretrained semantic transformer.")
         coarse_acoustic_transformer = CoarseAcousticTransformer()
         state_dict = torch.load(
             models_path
@@ -90,7 +98,6 @@ class AudioLM:
             / f"{str(type(coarse_acoustic_transformer).__name__)}.pth"
         )
         coarse_acoustic_transformer.load_state_dict(state_dict)
-        print("Instantiated pretrained coarse acoustic transformer.")
         fine_acoustic_transformer = None
         if fine_acoustic_modelling:
             fine_acoustic_transformer = FineAcousticTransformer()
@@ -100,7 +107,6 @@ class AudioLM:
                 / f"{str(type(fine_acoustic_transformer).__name__)}.pth"
             )
             fine_acoustic_transformer.load_state_dict(state_dict)
-            print("Instantiated pretrained fine acoustic transformer.")
         return AudioLM(
             semantic_encoder=semantic_encoder,
             semantic_transformer=semantic_transformer,
@@ -114,24 +120,21 @@ class AudioLM:
         train_dataloader: AudioDataLoader,
         val_dataloader: AudioDataLoader,
         models_path: os.PathLike,
-        override_if_exists: bool = False,
         fine_acoustic_modelling: bool = False,
+        intervals: int = 10,
+        early_stop_counter: int = 10,
+        early_stopping_range: int = 10,
+        epochs: int = 1,
     ):
         w2v_hubert = W2VHuBert()
         encodec = Encodec()
-        intervals = 10
-        early_stop_counter = 10
-        early_stopping_range = 10
-        epochs = 1
+
         semantic_transformer = SemanticTransformer()
-        if (
-            override_if_exists
-            and (
-                Path(models_path)
-                / "models"
-                / f"{str(type(semantic_transformer).__name__)}.pth"
-            ).exists()
-        ):
+        if not (
+            Path(models_path)
+            / "models"
+            / f"{str(type(semantic_transformer).__name__)}.pth"
+        ).exists():
 
             semantic_loss = nn.CrossEntropyLoss()
             semantic_optimizer = torch.optim.Adam(
@@ -161,14 +164,11 @@ class AudioLM:
             )
             semantic_transformer.load_state_dict(state_dict)
         coarse_acoustic_transformer = CoarseAcousticTransformer()
-        if (
-            override_if_exists
-            and (
-                Path(models_path)
-                / "models"
-                / f"{str(type(coarse_acoustic_transformer).__name__)}.pth"
-            ).exists()
-        ):
+        if not (
+            Path(models_path)
+            / "models"
+            / f"{str(type(coarse_acoustic_transformer).__name__)}.pth"
+        ).exists():
 
             coarse_loss = nn.CrossEntropyLoss()
             coarse_optimizer = torch.optim.Adam(
@@ -203,8 +203,7 @@ class AudioLM:
         fine_acoustic_transformer = FineAcousticTransformer()
         if (
             fine_acoustic_modelling
-            and override_if_exists
-            and (
+            and not (
                 Path(models_path)
                 / "models"
                 / f"{str(type(fine_acoustic_transformer).__name__)}.pth"
@@ -238,6 +237,7 @@ class AudioLM:
     def test(
         self,
         test_dataloader: AudioDataLoader,
+        loss: nn.Module = nn.CrossEntropyLoss(),
         intervals=10,
         early_stop_counter=10,
         early_stopping_range=10,
@@ -250,7 +250,7 @@ class AudioLM:
             train_dataloader=None,
             val_dataloader=None,
             test_dataloader=test_dataloader,
-            loss=None,
+            loss=loss,
             optimizer=None,
             intervals=intervals,
             save_path=None,
@@ -268,7 +268,7 @@ class AudioLM:
             train_dataloader=None,
             val_dataloader=None,
             test_dataloader=test_dataloader,
-            loss=None,
+            loss=loss,
             optimizer=None,
             intervals=intervals,
             save_path=None,
@@ -288,7 +288,7 @@ class AudioLM:
                 train_dataloader=None,
                 val_dataloader=None,
                 test_dataloader=test_dataloader,
-                loss=None,
+                loss=loss,
                 optimizer=None,
                 intervals=intervals,
                 save_path=None,

@@ -44,7 +44,6 @@ def save_checkpoint(
         },
         checkpoint,
     )
-    print(f"Checkpoint saved: {checkpoint_path}")
 
 
 def load_checkpoint(
@@ -70,9 +69,9 @@ def load_checkpoint(
     optimizer = optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
     early_stop_counter = checkpoint["early_stop_counter"]
-    print(
-        f"Checkpoint loaded: {checkpoint}, starting from epoch: {checkpoint['epoch']+1}"
-    )
+    # print(
+    #     f"Checkpoint loaded: {checkpoint}, starting from epoch: {checkpoint['epoch']+1}"
+    # )
     return model, epoch, optimizer, early_stop_counter
 
 
@@ -86,4 +85,4 @@ def save_model(model: nn.Module, save_path: os.PathLike):
     """
     model_path = Path(save_path) / "models" / f"{str(type(model).__name__)}.pth"
     torch.save(model.state_dict(), model_path)
-    print(f"Model saved: {model_path}")
+    # print(f"Model saved: {model_path}")

@@ -2,11 +2,12 @@
 
 import os
 from pathlib import Path
+import copy
 
 import torch
 import torch.nn.functional as F
 import torchaudio
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, random_split
 
 
 def padding_audio(audio, max_len):
@@ -120,12 +121,16 @@ class AudioDataLoader(DataLoader):
         shuffle=False,
         max_length_audio=3,
         sample_frequency=16000,
+        dataset=None,
     ):
-        self.dataset = AudioDataset(
-            data_path,
-            max_length_audio=max_length_audio,
-            sample_frequency=sample_frequency,
-        )
+        if dataset:
+            self.dataset = dataset
+        else:
+            self.dataset = AudioDataset(
+                data_path,
+                max_length_audio=max_length_audio,
+                sample_frequency=sample_frequency,
+            )
         super().__init__(
             self.dataset,
             batch_size=batch_size,
@@ -141,3 +146,16 @@ class AudioDataLoader(DataLoader):
         audio = torch.stack(audio)
 
         return audio
+
+    def split(
+        self, train_size: float = 0.5, val_size: float = 0.3, test_size: float = 0.2
+    ):
+        assert train_size + val_size + test_size, 1
+        train_subset, val_subset, test_subset = random_split(
+            self.dataset, [train_size, val_size, test_size]
+        )
+        train = AudioDataLoader("", dataset=train_subset)
+        val = AudioDataLoader("", dataset=val_subset)
+        test = AudioDataLoader("", dataset=test_subset)
+
+        return train, val, test

@@ -211,9 +211,9 @@ def initialize_transformer_from_gpt(
             gpt_pretrained_model.lm_head.weight.data[:vocab_size, :]
         )
 
-    print("Model initialized from GPT2")
-    print(
-        f"Hyperparameters: d_model={d_model}, nhead={nhead}, num_layers={num_layers}, dim_feedforward={dim_feedforward}"
-    )
+    # print("Model initialized from GPT2")
+    # print(
+    #     f"Hyperparameters: d_model={d_model}, nhead={nhead}, num_layers={num_layers}, dim_feedforward={dim_feedforward}"
+    # )
 
     return initialized_model

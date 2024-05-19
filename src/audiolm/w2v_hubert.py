@@ -75,9 +75,9 @@ def load_checkpoint():
         {str(checkpoint): torch_check}
     )
     model = models[0]
-    print("Modello caricato")
+    # print("Modello caricato")
     kmeans = joblib.load(quantizer)
-    print("Kmeans caricato")
+    # print("Kmeans caricato")
 
     return model, kmeans
 

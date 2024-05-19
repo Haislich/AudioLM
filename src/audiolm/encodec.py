@@ -72,4 +72,4 @@ class Encodec(nn.Module):
         padding_mask: Optional[torch.Tensor] = None,
     ):
         """Decodes the given frames into an output audio waveform."""
-        return self.model.encode(audio_codes, audio_scales, padding_mask, None)
+        return self.model.decode(audio_codes, audio_scales, padding_mask, None)

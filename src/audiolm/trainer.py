@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm
 
 from audiolm.encodec import Encodec
-from audiolm.constants import DEVICE, DEBUG
+from audiolm.constants import DEVICE
 from audiolm.data_preparation import AudioDataLoader
 from audiolm.w2v_hubert import W2VHuBert
 from audiolm.absolute_transformer import (
@@ -134,7 +134,7 @@ class Trainer(ABC):
                 self.early_stop_counter += 1
 
             if self.early_stop_counter >= self.early_stopping_range:
-                print(f"Early stopping training at epoch: {epoch+1}")
+                # print(f"Early stopping training at epoch: {epoch+1}")
                 break
         writer.flush()
         writer.close()
@@ -146,13 +146,11 @@ class Trainer(ABC):
         with torch.no_grad():
             for batch in tqdm(self.test_dataloader, desc="Testing"):
                 batch = batch.to(DEVICE)
-                output, target = self.loss_generator(batch)
-
-                loss = self.loss(output, target)
+                loss = self.loss_generator(batch)
                 test_loss += loss.item()
 
         test_loss /= len(self.test_dataloader)
-        print(f"Test Loss: {test_loss: .4f}")
+        # print(f"Test Loss: {test_loss: .4f}")
 
         return test_loss
 
@@ -228,13 +226,9 @@ class SemanticTrainer(Trainer):
 
     def loss_generator(self, batch):
         semantic_encode = self.semantic_encoder(batch)
-        print(f"semantic_encode shape: {semantic_encode.shape}" if DEBUG else "")
+
         output, target = self.semantic_transformer.fit(semantic_encode)
-        print(
-            f"Generate output: {output.shape} and target:{target.shape}"
-            if DEBUG
-            else ""
-        )
+
         loss = self.loss(output, target)
         return loss
 
@@ -317,21 +311,16 @@ class CoarseAcousticTrainer(Trainer):
         )
 
     def loss_generator(self, batch):
+
         semantic_encode = self.semantic_encoder(batch)
         semantic_token = self.semantic_transformer.generate(semantic_encode, 3)
 
         coarse_acoustic_tokens, _, _ = self.acoustic_encoder_decoder.encode(batch)
-        print(f"shape coarse_acoustic: {coarse_acoustic_tokens.shape}")
-        print(f"shape semantic_token: {semantic_token.shape}")
 
         conditioning = torch.cat((semantic_token, coarse_acoustic_tokens), dim=1)
 
         output, target = self.coarse_acoustic_transformer.fit(conditioning)
-        print(
-            f"Generate output: {output.shape} and target:{target.shape}"
-            if DEBUG
-            else ""
-        )
+
         loss = self.loss(output, target)
         return loss
 
