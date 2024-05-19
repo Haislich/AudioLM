@@ -85,7 +85,7 @@ def load_checkpoint():
 ##Model class
 
 
-class W2VHuBERT_Quantizier(nn.Module):
+class W2VHuBert(nn.Module):
     """
     A class representing a quantizer based on the W2VHuBERT model.
     This class takes an input audio signal, quantizes it using the W2VHuBERT model,

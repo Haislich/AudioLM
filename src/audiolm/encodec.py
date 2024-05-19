@@ -7,14 +7,14 @@ from transformers import EncodecModel
 import torchaudio
 
 
-class CustomEncodecModel(nn.Module):
+class Encodec(nn.Module):
     """This model is a wrapper around the `EnCodec` model
     pretrained and taken from the huggingface hub.
     It reshapes the output of the `EnCodec` quantizer to match Bert's output shape."""
 
     def __init__(self):
         """
-        Initializes a `CustomEncodecModel` object.
+        Initializes a `Encodec` object.
 
         """
         super().__init__()

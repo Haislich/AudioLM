@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import torch
 from torch import nn
@@ -8,17 +9,18 @@ from audiolm.absolute_transformer import (
     CoarseAcousticTransformer,
     FineAcousticTransformer,
 )
-from audiolm.custom_encodec import CustomEncodecModel
+from audiolm.encodec import Encodec
+from audiolm.w2v_hubert import W2VHuBert
+from audiolm.trainer import SemanticTrainer, CoarseAcousticTrainer, FineAcousticTrainer
 from audiolm.data_preparation import AudioDataLoader
-from audiolm.w2v_hubert import W2VHuBERT_Quantizier
 
 
 class AudioLM:
     def __init__(
         self,
-        semantic_encoder: W2VHuBERT_Quantizier,
+        semantic_encoder: W2VHuBert,
         semantic_transformer: SemanticTransformer,
-        acoustic_encoder_decoder: CustomEncodecModel,
+        acoustic_encoder_decoder: Encodec,
         coarse_acoustic_transformer: CoarseAcousticTransformer,
         fine_acoustic_transformer: FineAcousticTransformer,
         # https://stackoverflow.com/a/53797072
@@ -32,12 +34,6 @@ class AudioLM:
         n_fine_quantizers=4,
     ) -> None:
         super().__init__()
-        # TODO Freeze semantic encoder and decoder parameters.
-        #
-        # 'The tokenizer and detokenizer are pretrained and frozen ahead of training'.
-        # Freezing the parameters for the acoustic token implicitly freezes the parameters
-        # For the decoder
-        #
         self.semantic_encoder = semantic_encoder
         for param in self.semantic_encoder.model.parameters():
             param.requires_grad = False
@@ -51,7 +47,7 @@ class AudioLM:
         self.n_coarse_quantizers = n_coarse_quantizers
         self.n_fine_quantizers = n_fine_quantizers
 
-    def inference(self, x: torch.Tensor):
+    def generate(self, x: torch.Tensor):
         # Add dimension at the beginning to simulate being a batch
         # to conform with the rest of the API
         x = x.unsqueeze(0)
@@ -74,36 +70,230 @@ class AudioLM:
 
         return output
 
-    def from_pretrained():
-
-        semantic_encoder = W2VHuBERT_Quantizier()
-        semantic_transformer = SemanticTransformer(
-            500,  # Valore massimo del quantizzatore
-            768,  # Numero arbitratio
+    @staticmethod
+    def from_pretrained(
+        models_path: os.PathLike,
+        fine_acoustic_modelling: bool = False,
+    ):
+        semantic_encoder = W2VHuBert()
+        semantic_transformer = SemanticTransformer()
+        state_dict = torch.load(
+            models_path / "models" / f"{str(type(semantic_transformer).__name__)}.pth"
         )
-        dataloader = AudioDataLoader(os.getcwd() + "\\..\\data\\datasets", batch_size=1)
-        loss = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(semantic_transformer.parameters(), lr=0.001)
+        semantic_transformer.load_state_dict(state_dict)
+        acoustic_encoder_decoder = Encodec()
+        print("Instantiated pretrained semantic transformer.")
+        coarse_acoustic_transformer = CoarseAcousticTransformer()
+        state_dict = torch.load(
+            models_path
+            / "models"
+            / f"{str(type(coarse_acoustic_transformer).__name__)}.pth"
+        )
+        coarse_acoustic_transformer.load_state_dict(state_dict)
+        print("Instantiated pretrained coarse acoustic transformer.")
+        fine_acoustic_transformer = None
+        if fine_acoustic_modelling:
+            fine_acoustic_transformer = FineAcousticTransformer()
+            state_dict = torch.load(
+                models_path
+                / "models"
+                / f"{str(type(fine_acoustic_transformer).__name__)}.pth"
+            )
+            fine_acoustic_transformer.load_state_dict(state_dict)
+            print("Instantiated pretrained fine acoustic transformer.")
+        return AudioLM(
+            semantic_encoder=semantic_encoder,
+            semantic_transformer=semantic_transformer,
+            acoustic_encoder_decoder=acoustic_encoder_decoder,
+            coarse_acoustic_transformer=coarse_acoustic_transformer,
+            fine_acoustic_transformer=fine_acoustic_transformer,
+        )
+
+    @staticmethod
+    def train(
+        train_dataloader: AudioDataLoader,
+        val_dataloader: AudioDataLoader,
+        models_path: os.PathLike,
+        override_if_exists: bool = False,
+        fine_acoustic_modelling: bool = False,
+    ):
+        w2v_hubert = W2VHuBert()
+        encodec = Encodec()
         intervals = 10
-        save_path = Path(os.getcwd() + "\\..\\data\\")
         early_stop_counter = 10
         early_stopping_range = 10
         epochs = 1
+        semantic_transformer = SemanticTransformer()
+        if (
+            override_if_exists
+            and (
+                Path(models_path)
+                / "models"
+                / f"{str(type(semantic_transformer).__name__)}.pth"
+            ).exists()
+        ):
+
+            semantic_loss = nn.CrossEntropyLoss()
+            semantic_optimizer = torch.optim.Adam(
+                semantic_transformer.parameters(), lr=0.001
+            )
+
+            semantic_trainer = SemanticTrainer(
+                semantic_encoder=w2v_hubert,
+                semantic_transformer=semantic_transformer,
+                train_dataloader=train_dataloader,
+                val_dataloader=val_dataloader,
+                test_dataloader=None,
+                loss=semantic_loss,
+                optimizer=semantic_optimizer,
+                intervals=intervals,
+                save_path=models_path,
+                early_stop_counter=early_stop_counter,
+                early_stopping_range=early_stopping_range,
+                epochs=epochs,
+            )
+            semantic_trainer.train()
+        else:
+            state_dict = torch.load(
+                models_path
+                / "models"
+                / f"{str(type(semantic_transformer).__name__)}.pth"
+            )
+            semantic_transformer.load_state_dict(state_dict)
+        coarse_acoustic_transformer = CoarseAcousticTransformer()
+        if (
+            override_if_exists
+            and (
+                Path(models_path)
+                / "models"
+                / f"{str(type(coarse_acoustic_transformer).__name__)}.pth"
+            ).exists()
+        ):
+
+            coarse_loss = nn.CrossEntropyLoss()
+            coarse_optimizer = torch.optim.Adam(
+                coarse_acoustic_transformer.parameters(), lr=0.001
+            )
+
+            coarse_acoustic_trainer = CoarseAcousticTrainer(
+                semantic_encoder=w2v_hubert,
+                semantic_transformer=semantic_transformer,
+                acoustic_encoder_decoder=encodec,
+                coarse_acoustic_transformer=coarse_acoustic_transformer,
+                train_dataloader=train_dataloader,
+                val_dataloader=val_dataloader,
+                test_dataloader=None,
+                loss=coarse_loss,
+                optimizer=coarse_optimizer,
+                intervals=intervals,
+                save_path=models_path,
+                early_stop_counter=early_stop_counter,
+                early_stopping_range=early_stopping_range,
+                epochs=epochs,
+            )
+            coarse_acoustic_trainer.train()
+
+        else:
+            state_dict = torch.load(
+                models_path
+                / "models"
+                / f"{str(type(coarse_acoustic_transformer).__name__)}.pth"
+            )
+            coarse_acoustic_transformer.load_state_dict(state_dict)
+        fine_acoustic_transformer = FineAcousticTransformer()
+        if (
+            fine_acoustic_modelling
+            and override_if_exists
+            and (
+                Path(models_path)
+                / "models"
+                / f"{str(type(fine_acoustic_transformer).__name__)}.pth"
+            ).exists()
+        ):
+
+            fine_loss = nn.CrossEntropyLoss()
+            fine_optimizer = torch.optim.Adam(
+                fine_acoustic_transformer.parameters(), lr=0.001
+            )
+
+            fine_acoustic_trainer = FineAcousticTrainer(
+                semantic_encoder=w2v_hubert,
+                semantic_transformer=semantic_transformer,
+                acoustic_encoder_decoder=encodec,
+                coarse_acoustic_transformer=coarse_acoustic_transformer,
+                fine_acoustic_transformer=fine_acoustic_transformer,
+                train_dataloader=train_dataloader,
+                val_dataloader=val_dataloader,
+                test_dataloader=None,
+                loss=fine_loss,
+                optimizer=fine_optimizer,
+                intervals=intervals,
+                save_path=models_path,
+                early_stop_counter=early_stop_counter,
+                early_stopping_range=early_stopping_range,
+                epochs=epochs,
+            )
+            fine_acoustic_trainer.train()
+
+    def test(
+        self,
+        test_dataloader: AudioDataLoader,
+        intervals=10,
+        early_stop_counter=10,
+        early_stopping_range=10,
+        epochs=1,
+    ):
+
         semantic_trainer = SemanticTrainer(
-            semantic_encoder=semantic_encoder,
-            semantic_transformer=semantic_transformer,
-            train_dataloader=dataloader,
-            val_dataloader=dataloader,
-            test_dataloader=dataloader,
-            loss=loss,
-            optimizer=optimizer,
+            semantic_encoder=self.semantic_encoder,
+            semantic_transformer=self.semantic_transformer,
+            train_dataloader=None,
+            val_dataloader=None,
+            test_dataloader=test_dataloader,
+            loss=None,
+            optimizer=None,
             intervals=intervals,
-            save_path=save_path,
+            save_path=None,
             early_stop_counter=early_stop_counter,
             early_stopping_range=early_stopping_range,
             epochs=epochs,
         )
+        semantic_trainer.test()
 
-        semantic_trainer.train()
+        coarse_acustic_trainer = CoarseAcousticTrainer(
+            semantic_encoder=self.semantic_encoder,
+            semantic_transformer=self.semantic_transformer,
+            acoustic_encoder_decoder=self.acoustic_encoder_decoder,
+            coarse_acoustic_transformer=self.coarse_acoustic_transformer,
+            train_dataloader=None,
+            val_dataloader=None,
+            test_dataloader=test_dataloader,
+            loss=None,
+            optimizer=None,
+            intervals=intervals,
+            save_path=None,
+            early_stop_counter=early_stop_counter,
+            early_stopping_range=early_stopping_range,
+            epochs=epochs,
+        )
+        coarse_acustic_trainer.test()
 
-    # def pipeline()
+        if self.fine_acoustic_transformer is not None:
+            fine_acustic_trainer = FineAcousticTrainer(
+                semantic_encoder=self.semantic_encoder,
+                semantic_transformer=self.semantic_transformer,
+                acoustic_encoder_decoder=self.acoustic_encoder_decoder,
+                coarse_acoustic_transformer=self.coarse_acoustic_transformer,
+                fine_acoustic_transformer=self.fine_acoustic_transformer,
+                train_dataloader=None,
+                val_dataloader=None,
+                test_dataloader=test_dataloader,
+                loss=None,
+                optimizer=None,
+                intervals=intervals,
+                save_path=None,
+                early_stop_counter=early_stop_counter,
+                early_stopping_range=early_stopping_range,
+                epochs=epochs,
+            )
+            fine_acustic_trainer.test()

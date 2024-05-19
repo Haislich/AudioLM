@@ -10,19 +10,20 @@ import torch
 from torch import nn
 
 from audiolm.data_preparation import AudioDataLoader
-from audiolm.w2v_hubert import W2VHuBERT_Quantizier
+from audiolm.w2v_hubert import W2VHuBert
 from audiolm.absolute_transformer import (
     SemanticTransformer,
     CoarseAcousticTransformer,
     FineAcousticTransformer,
 )
 from audiolm.trainer import SemanticTrainer, CoarseAcousticTrainer, FineAcousticTrainer
-from audiolm.custom_encodec import CustomEncodecModel
+from audiolm.encodec import Encodec
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 torch.set_warn_always(False)
 
 SAVE_PATH = Path(os.getcwd() + "\\data\\datasets")
+MODEL_PATH = Path(os.getcwd() + "\\data")
 
 
 class TestSemanticTransformerTrainer(unittest.TestCase):
@@ -35,7 +36,7 @@ class TestSemanticTransformerTrainer(unittest.TestCase):
         print("===========================================")
 
         print("Created generator.")
-        semantic_encoder = W2VHuBERT_Quantizier()
+        semantic_encoder = W2VHuBert()
         print("Created encoder.")
 
         semantic_transformer = SemanticTransformer()
@@ -79,14 +80,14 @@ class TestCoarseAcousticTransformerTrainer(unittest.TestCase):
         print("===========================================")
 
         print("Created generator.")
-        semantic_encoder = W2VHuBERT_Quantizier()
+        semantic_encoder = W2VHuBert()
         print("Created encoder.")
         semantic_transformer = SemanticTransformer()
         state_dict = torch.load(
             SAVE_PATH / "models" / f"{str(type(semantic_transformer).__name__)}.pth"
         )
         semantic_transformer.load_state_dict(state_dict)
-        acoustic_encoder_decoder = CustomEncodecModel()
+        acoustic_encoder_decoder = Encodec()
         print("Created semantic transformer.")
         coarse_acoustic_transformer = CoarseAcousticTransformer()
         print("Created acoustic transformer.")
@@ -131,14 +132,14 @@ class TestFineAcousticTransformerTrainer(unittest.TestCase):
         print("===========================================")
 
         print("Created generator.")
-        semantic_encoder = W2VHuBERT_Quantizier()
+        semantic_encoder = W2VHuBert()
         print("Created encoder.")
         semantic_transformer = SemanticTransformer()
         state_dict = torch.load(
             SAVE_PATH / "models" / f"{str(type(semantic_transformer).__name__)}.pth"
         )
         semantic_transformer.load_state_dict(state_dict)
-        acoustic_encoder_decoder = CustomEncodecModel()
+        acoustic_encoder_decoder = Encodec()
         print("Instantiated pretrained semantic transformer.")
         coarse_acoustic_transformer = CoarseAcousticTransformer()
         state_dict = torch.load(

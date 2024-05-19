@@ -10,7 +10,7 @@
 # """
 
 # from audiolm.data_preparation import AudioDataLoader
-# from audiolm.w2v_hubert import W2VHuBERT_Quantizier
+# from audiolm.w2v_hubert import W2VHuBert
 
 # if __name__ == "__main__":
 
@@ -25,7 +25,7 @@
 #         print(batch.shape)
 #     print(dataloader.__len__())
 
-#     hubert = W2VHuBERT_Quantizier(
+#     hubert = W2VHuBert(
 #         dataloader=dataloader, sample_frequency=16000, input_audio_hz=16000
 #     )
 #     batch_1 = next(iter(dataloader))

@@ -31,12 +31,14 @@ torchaudio = "2.2.1"
 pydantic = "^2.7.1"
 torchinfo = "^1.8.0"
 ipywidgets = "^8.1.2"
+gradio = "^4.31.4"
 
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^3.1.0"
 black = "^24.2.0"
 textual-dev = "^1.5.1"
+ruff = "^0.4.4"
 
 [build-system]
 requires = ["poetry-core"]

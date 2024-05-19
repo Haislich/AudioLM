@@ -10,10 +10,10 @@ from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm
 
-from audiolm.custom_encodec import CustomEncodecModel
+from audiolm.encodec import Encodec
 from audiolm.constants import DEVICE, DEBUG
 from audiolm.data_preparation import AudioDataLoader
-from audiolm.w2v_hubert import W2VHuBERT_Quantizier
+from audiolm.w2v_hubert import W2VHuBert
 from audiolm.absolute_transformer import (
     SemanticTransformer,
     CoarseAcousticTransformer,
@@ -31,9 +31,9 @@ class Trainer(ABC):
     # pylint: disable =too-many-arguments
     def __init__(
         self,
-        semantic_encoder: Optional[W2VHuBERT_Quantizier] = None,
+        semantic_encoder: Optional[W2VHuBert] = None,
         semantic_transformer: Optional[SemanticTransformer] = None,
-        acoustic_encoder_decoder: Optional[CustomEncodecModel] = None,
+        acoustic_encoder_decoder: Optional[Encodec] = None,
         coarse_acoustic_transformer: Optional[CoarseAcousticTransformer] = None,
         fine_acoustic_transformer: Optional[FineAcousticTransformer] = None,
         train_dataloader: Optional[AudioDataLoader] = None,
@@ -165,7 +165,7 @@ class SemanticTrainer(Trainer):
 
     def __init__(
         self,
-        semantic_encoder: W2VHuBERT_Quantizier,
+        semantic_encoder: W2VHuBert,
         semantic_transformer: SemanticTransformer,
         train_dataloader: AudioDataLoader,
         val_dataloader: AudioDataLoader,
@@ -187,7 +187,7 @@ class SemanticTrainer(Trainer):
 
         Args
         ----
-            `semantic_encoder` (W2VHuBERT_Quantizier)
+            `semantic_encoder` (W2VHuBert)
 
             `semantic_transformer` (TransformerDecoderOnly)
 
@@ -251,9 +251,9 @@ class CoarseAcousticTrainer(Trainer):
 
     def __init__(
         self,
-        semantic_encoder: W2VHuBERT_Quantizier,
+        semantic_encoder: W2VHuBert,
         semantic_transformer: SemanticTransformer,
-        acoustic_encoder_decoder: CustomEncodecModel,
+        acoustic_encoder_decoder: Encodec,
         coarse_acoustic_transformer: CoarseAcousticTransformer,
         train_dataloader: AudioDataLoader,
         val_dataloader: AudioDataLoader,
@@ -275,7 +275,7 @@ class CoarseAcousticTrainer(Trainer):
 
         Args
         ----
-            `semantic_encoder` (W2VHuBERT_Quantizier)
+            `semantic_encoder` (W2VHuBert)
 
             `semantic_transformer` (TransformerDecoderOnly)
 
@@ -347,9 +347,9 @@ class FineAcousticTrainer(Trainer):
 
     def __init__(
         self,
-        semantic_encoder: W2VHuBERT_Quantizier,
+        semantic_encoder: W2VHuBert,
         semantic_transformer: SemanticTransformer,
-        acoustic_encoder_decoder: CustomEncodecModel,
+        acoustic_encoder_decoder: Encodec,
         coarse_acoustic_transformer: CoarseAcousticTransformer,
         fine_acoustic_transformer: FineAcousticTransformer,
         train_dataloader: AudioDataLoader,
@@ -372,7 +372,7 @@ class FineAcousticTrainer(Trainer):
 
         Args
         ----
-            `semantic_encoder` (W2VHuBERT_Quantizier)
+            `semantic_encoder` (W2VHuBert)
 
             `semantic_transformer` (TransformerDecoderOnly)
 
