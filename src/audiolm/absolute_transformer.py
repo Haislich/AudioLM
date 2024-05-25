@@ -96,6 +96,7 @@ class TransformerDecoderOnly(nn.Module):
 
     def generate(self, prompt_ids, max_length: int, temperature: float = 1.0):
         self.eval()
+        next_token_list = []
         with torch.no_grad():
             for _ in range(max_length):
                 logits = self.forward(prompt_ids)
@@ -104,7 +105,12 @@ class TransformerDecoderOnly(nn.Module):
                 next_token = torch.multinomial(
                     probs, num_samples=1
                 )  # sample from the distribution
-                token_generated = torch.cat([prompt_ids, next_token], dim=1)
+                #token_generated = torch.cat([prompt_ids, next_token], dim=1)
+                next_token_list.append(next_token)
+
+            #terminato il ciclo for prende il prompt e concatena i token generati
+            token_generated = torch.cat([prompt_ids, *next_token_list], dim=1)   
+        
 
             return token_generated
 
