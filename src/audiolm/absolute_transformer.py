@@ -109,7 +109,13 @@ class TransformerDecoderOnly(nn.Module):
                 next_token_list.append(next_token)
 
             #terminato il ciclo for prende il prompt e concatena i token generati
-            token_generated = torch.cat([prompt_ids, *next_token_list], dim=1)   
+            next_token_list = torch.Tensor(next_token_list)
+            prompt_ids_type = prompt_ids.type()
+            if prompt_ids_type != next_token_list.type():
+                next_token_list = next_token_list.type(prompt_ids_type)
+            next_token_list = next_token_list.unsqueeze(0)
+            
+            token_generated = torch.cat([prompt_ids, next_token_list], dim=1)   
         
 
             return token_generated
