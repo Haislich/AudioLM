@@ -5,55 +5,6 @@ import torchaudio
 from torch import nn
 import math
 
-# def relative_to_absolute(q):
-#         """
-#         Converts the dimension that is specified from the axis
-#         from relative distances (with length 2*tokens-1) to absolute distance (length tokens)
-#         Input: [bs, heads, length, 2*length - 1]
-#         Output: [bs, heads, length, length]
-#         """
-#         b, h, l, _, device, dtype = *q.shape, q.device, q.dtype
-#         dd = {'device': device, 'dtype': dtype}
-#         col_pad = torch.zeros((b, h, l, 1), **dd)
-#         x = torch.cat((q, col_pad), dim=3)  # zero pad 2l-1 to 2l
-#         flat_x = x.reshape(b, h, l * (x.shape[3]))
-#         flat_pad = torch.zeros((b, h, l - 1), **dd)
-#         flat_x_padded = torch.cat((flat_x, flat_pad), dim=2)
-#         final_x = flat_x_padded.reshape(b, h, l + 1, 2 * l - 1)
-#         final_x = final_x[:, :, :l, (l - 1):]
-#         return final_x
-
-# def rel_pos_emb_1d(q, rel_emb, shared_heads):
-#         """
-#         Same functionality as RelPosEmb1D
-
-#         Args:
-#             q: a 4d tensor of shape [batch, heads, tokens, dim]
-#             rel_emb: a 2D or 3D tensor
-#             of shape [ 2*tokens-1 , dim] or [ heads, 2*tokens-1 , dim]
-#         """
-#         if shared_heads:
-#             emb = torch.einsum('b h t d, r d -> b h t r', q, rel_emb)
-#         else:
-#             emb = torch.einsum('b h t d, h r d -> b h t r', q, rel_emb)
-#         return relative_to_absolute(emb)
-
-
-# class RelativePositionalEmbedding(nn.Module):
-
-#    def __init__(self, tokens, dim_head, heads=None):
-#        super().__init__()
-#        scale = dim_head ** -0.5
-#        self.shared_heads = heads if heads is not None else True
-#        if self.shared_heads:
-#            self.rel_pos_emb = nn.Parameter(torch.randn(2 * tokens - 1, dim_head) * scale)
-#        else:
-#            self.rel_pos_emb = nn.Parameter(torch.randn(heads, 2 * tokens - 1, dim_head) * scale)
-
-#    def forward(self, q):
-#        return rel_pos_emb_1d(q, self.rel_pos_emb, self.shared_heads)
-
-
 class RelativePosition(nn.Module):
 
     def __init__(self, num_units, max_relative_position):
@@ -92,9 +43,10 @@ class MultiHeadAttention(nn.Module):
 
     def __init__(
         self,
-        embed_dim=100,
-        num_heads=2,
-        sequence_length=100,
+        embed_dim,
+        num_heads,
+        sequence_length,
+        max_relative_position,
         attn_dropout_prob: float = 0.1,
         embed_dropout_prob: float = 0.1,
         device="cuda" if torch.cuda.is_available() else "cpu",
@@ -114,7 +66,7 @@ class MultiHeadAttention(nn.Module):
             1, 1, sequence_length, sequence_length
         )
         self.register_buffer("casual_mask", _tril_reshape)
-        self.max_relative_position = 2
+        self.max_relative_position = max_relative_position
 
         self.relative_position_k = RelativePosition(
             self.single_head_dim, self.max_relative_position
@@ -242,7 +194,7 @@ class MultiHeadAttention(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, embed_dim=100, embed_dropout_prob=0.1):
+    def __init__(self, embed_dim, embed_dropout_prob=0.1):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(embed_dim, 4 * embed_dim),
@@ -255,57 +207,119 @@ class FeedForward(nn.Module):
         return self.net(x)
 
 
-class CasualAttentionBlock(nn.Module):
-    def __init__(self, embed_dim=100):
+class TransformerLayer(nn.Module):
+    def __init__(
+        self, 
+        embed_dim, 
+        num_heads, 
+        sequence_length, 
+        max_relative_position, 
+        attn_dropout_prob=0.1, 
+        embed_dropout_prob=0.1,
+        ff_dropout_prob=0.1,
+        device="cuda" if torch.cuda.is_available() else "cpu"
+    ):
         super().__init__()
-        self.layer_norm_1 = nn.LayerNorm(embed_dim)
-        self.multi_head_self_attention = MultiHeadAttention()
-        self.layer_norm_2 = nn.LayerNorm(embed_dim)
-        self.ff_net = FeedForward()
-
-    def forward(self, x: torch.Tensor):
-        x = x + self.multi_head_self_attention(self.layer_norm_1(x))
-        x = x + self.ff_net(self.layer_norm_2(x))
+        
+        # Inizializzazione della Multi-Head Attention e del Feed Forward
+        self.attention = MultiHeadAttention(
+            embed_dim=embed_dim,
+            num_heads=num_heads,
+            sequence_length=sequence_length,
+            max_relative_position=max_relative_position,
+            attn_dropout_prob=attn_dropout_prob,
+            embed_dropout_prob=embed_dropout_prob,
+            device=device
+        )
+        self.feed_forward = FeedForward(
+            embed_dim=embed_dim,
+            embed_dropout_prob=ff_dropout_prob
+        )
+        
+        # Normalizzazione a livello per l'attention e per il feed forward
+        self.norm1 = nn.LayerNorm(embed_dim)
+        self.norm2 = nn.LayerNorm(embed_dim)
+        
+        # Dropout dopo il feed forward
+        self.dropout = nn.Dropout(ff_dropout_prob)
+        
+    def forward(self, x):
+        # Applica l'attention multi-testa
+        attn_output = self.attention(x)
+        # Connetti l'output dell'attention all'input con un collegamento residuo e applica normalizzazione
+        x = self.norm1(x + attn_output)
+        
+        # Passa l'output della normalizzazione attraverso il feed forward network
+        ff_output = self.feed_forward(x)
+        # Applica il dropout, collega il risultato al layer precedente con un collegamento residuo e applica la normalizzazione
+        x = self.norm2(x + self.dropout(ff_output))
+        
         return x
 
 
+
 class RelativeTransformer(nn.Module):
-    def __init__(self, num_layers=12, embed_dim=1024, vocab_size=500):
+    def __init__(
+        self, 
+        embed_dim, 
+        num_heads, 
+        num_layers, 
+        sequence_length, 
+        max_relative_position, 
+        vocab_size, 
+        attn_dropout_prob=0.1, 
+        embed_dropout_prob=0.1, 
+        ff_dropout_prob=0.1,
+        device="cuda" if torch.cuda.is_available() else "cpu"
+    ):
         super().__init__()
+        
+        self.device = device
+        
+        # Embedding layer per gli input tokens
+        self.token_embedding = nn.Embedding(vocab_size, embed_dim)
+        
+        # Transformer layers
+        self.layers = nn.ModuleList([
+            TransformerLayer(
+                embed_dim=embed_dim, 
+                num_heads=num_heads, 
+                sequence_length=sequence_length, 
+                max_relative_position=max_relative_position, 
+                attn_dropout_prob=attn_dropout_prob, 
+                embed_dropout_prob=embed_dropout_prob, 
+                ff_dropout_prob=ff_dropout_prob, 
+                device=device
+            ) for _ in range(num_layers)
+        ])
+        
+        # Output linear layer che trasforma l'output finale del transformer in logits per ogni token nel vocabolario
+        self.output_linear = nn.Linear(embed_dim, vocab_size)
+        
+        # Dropout su input embedding
+        self.input_dropout = nn.Dropout(embed_dropout_prob)
 
-        self.num_layers = num_layers
-        self.embed_dim = embed_dim
-        self.vocab_size = vocab_size
-        self.token_embed_table = nn.Embedding(self.vocab_size, self.embed_dim)
-        self.pos_embed_table = "TODO"
-        self.layers = nn.ModuleList(
-            [CasualAttentionBlock(embed_dim) for _ in range(num_layers)]
-        )
-        self.layer_norm = nn.LayerNorm(embed_dim)
-        self.lm_head = nn.Linear(embed_dim, self.token_embed_table.shape[0])
+    def forward(self, x):
+        x = self.token_embedding(x)  # Embed the input tokens
+        x = self.input_dropout(x)    # Apply dropout to the input embeddings
 
-        self.apply(self.init_weights)
-        self.sequence_length = "TODO"
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        # Pass the embedded input through each transformer layer
+        for layer in self.layers:
+            x = layer(x)
+        
+        # Apply the final linear layer to get logits for the next-token predictions
+        logits = self.output_linear(x)
+        
+        return logits
 
-    def init_weights(self, module):
-        pass
+    
+    def generate(self, input_sequence, max_length):
+        # Metodo per generare sequenze dalla rete
+        for _ in range(max_length):
+            logits = self.forward(input_sequence)
+            probabilities = F.softmax(logits[:, -1, :], dim=-1)
+            next_token = torch.multinomial(probabilities, 1)
+            input_sequence = torch.cat([input_sequence, next_token.unsqueeze(-1)], dim=1)
+            
+        return input_sequence
 
-
-#     def forward(self, x: torch.Tensor):
-#         for layer in self.layers:
-#             x = layer(x)
-#         return x
-
-# a = MultiHeadAttention(512, 8)
-
-
-# class TransformerDecoder(nn.Module):
-#     def __init__(self,
-#                  num_layers=12,
-#                  num_heads=16,
-#                  embed_dim=None,
-#                  ffn_dim=None,
-#                  dropout=None,
-#                  ):
-#         super().__init__()
