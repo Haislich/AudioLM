@@ -113,12 +113,10 @@ class TransformerDecoderOnly(nn.Module):
             prompt_ids_type = prompt_ids.type()
             if prompt_ids_type != next_token_list.type():
                 next_token_list = next_token_list.type(prompt_ids_type)
-            next_token_list = next_token_list.unsqueeze(0)
-            
-            token_generated = torch.cat([prompt_ids, next_token_list], dim=1)   
+            next_token_list = next_token_list.unsqueeze(0) 
         
 
-            return token_generated
+            return next_token_list
 
 
 class PositionalEncoding(nn.Module):
