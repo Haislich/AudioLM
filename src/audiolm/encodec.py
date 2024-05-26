@@ -62,6 +62,7 @@ class Encodec(nn.Module):
                 fine_codes = fine_codes.T.reshape(fine_quantizers * num_tokens)
                 fine.append(fine_codes)
                 audio_scales.append(encoded_frames.audio_scales)
+
         return (torch.stack(coarse), torch.stack(fine), audio_scales)
 
     # https://github.com/huggingface/transformers/blob/e0c3cee17085914bbe505c159beeb8ae39bc37dd/src/transformers/models/encodec/modeling_encodec.py#L708

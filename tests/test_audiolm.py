@@ -42,7 +42,7 @@ class TestAudioLM(unittest.TestCase):
 
     def test_generation(self):
         audiolm = AudioLM.from_pretrained(MODELS_PATH)
-        elem = next(iter(self.train_dataloader))[0]
+        elem = next(iter(self.train_dataloader))[0:1, :, :]
 
         torchaudio.save(
             DATA_PATH / "generated.flac", audiolm.generate(elem).squeeze(0), 24000

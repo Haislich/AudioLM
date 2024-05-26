@@ -25,7 +25,7 @@ class AudioLM:
         fine_acoustic_transformer: FineAcousticTransformer,
         # https://stackoverflow.com/a/53797072
         *,
-        audio_len=3,
+        audio_len=6,
         # We set Q' = 4 such that we predict the flattened tokens corresponding
         # to the coarse 4 layers in the second stage.
         n_coarse_quantizers=4,
@@ -50,33 +50,35 @@ class AudioLM:
     def generate(self, x: torch.Tensor):
         # Add dimension at the beginning to simulate being a batch
         # to conform with the rest of the API
-        x = x.unsqueeze(0)
         semantic_encode = self.semantic_encoder(x)
         semantic_token = self.semantic_transformer.generate(
-            semantic_encode, self.audio_len
+            semantic_encode, self.audio_len * 50
         )
 
         coarse_acoustic_tokens, fine_acoustic_tokens, audio_scales = (
             self.acoustic_encoder_decoder.encode(x)
         )
+        print(f"coarse_acoustic_tokens.shape = {coarse_acoustic_tokens.shape}")
         coarse_conditioning = torch.cat((semantic_token, coarse_acoustic_tokens), dim=1)
         coarse_tokens = self.coarse_acoustic_transformer.generate(
-            coarse_conditioning, 3
+            coarse_conditioning, self.audio_len * 75
         )
-        print(f"Coarse conditioning {coarse_tokens.shape}")
-        if self.fine_acoustic_transformer:
-            fine_acoustic_tokens = self.fine_acoustic_transformer.generate(
-                torch.cat((coarse_tokens, fine_acoustic_tokens), dim=1), 4
-            )
-            output = self.acoustic_encoder_decoder.decode(
-                fine_acoustic_tokens.unsqueeze(0), None
-            )
-        else:
-            print(coarse_tokens.shape)
+        print(f"coarse_tokens.shape = {coarse_tokens.shape}")
 
-            output = self.acoustic_encoder_decoder.decode(
-                coarse_tokens.unsqueeze(0).unsqueeze(0), [None]
-            )
+        # print(f"Coarse conditioning {coarse_tokens.shape}")
+        # if self.fine_acoustic_transformer:
+        #     fine_acoustic_tokens = self.fine_acoustic_transformer.generate(
+        #         torch.cat((coarse_tokens, fine_acoustic_tokens), dim=1), 4
+        #     )
+        #     output = self.acoustic_encoder_decoder.decode(
+        #         fine_acoustic_tokens.unsqueeze(0), None
+        #     )
+        # else:
+        #     print(coarse_tokens.shape)
+
+        output = self.acoustic_encoder_decoder.decode(
+            coarse_tokens.unsqueeze(0).unsqueeze(0), [None]
+        )
         return output["audio_values"]
 
     @staticmethod

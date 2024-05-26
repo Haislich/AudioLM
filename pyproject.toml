@@ -48,4 +48,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.pylint]
 disable = [
     "W0237", # arguments-renamed
+    "C0301", # line-too long
+    "R0913", # too many arguments
 ]
