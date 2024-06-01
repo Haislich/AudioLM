@@ -32,7 +32,7 @@ class AudioDataset(Dataset):
         torch.Tensor: Audio data tensor.
     """
 
-    def __init__(self, path_folder, max_length_audio=3, sample_frequency=16000):
+    def __init__(self, path_folder, max_length_audio=3, sample_frequency=16000, max_elems=100):
         super().__init__()
         self.path_folder = Path(path_folder)
         assert (
@@ -43,6 +43,7 @@ class AudioDataset(Dataset):
         self.max_len = max_length_audio * sample_frequency
         self.path_audios = self.__collate_audio()
         self.data = []
+        self.max_elems = max_elems
         self.preprocess_dataset()
 
     def __len__(self):
@@ -50,11 +51,15 @@ class AudioDataset(Dataset):
 
     def __collate_audio(self):
         """Returns the file locations."""
+        cnt = 0
         path_audios = []
         for dirpath, _, filenames in os.walk(self.path_folder):
             for filename in filenames:
+                if cnt >= self.max_elems:
+                    return path_audios
                 path_to_audio = os.path.join(dirpath, filename)
                 if path_to_audio.endswith(".flac"):
+                    cnt +=1
                     path_audios.append(path_to_audio)
 
         return path_audios
@@ -121,6 +126,7 @@ class AudioDataLoader(DataLoader):
         shuffle=False,
         max_length_audio=3,
         sample_frequency=16000,
+        max_elems=100,
         dataset=None,
     ):
         if dataset:
@@ -130,6 +136,7 @@ class AudioDataLoader(DataLoader):
                 data_path,
                 max_length_audio=max_length_audio,
                 sample_frequency=sample_frequency,
+                max_elems=max_elems,
             )
         super().__init__(
             self.dataset,
