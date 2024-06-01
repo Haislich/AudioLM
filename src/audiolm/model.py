@@ -25,7 +25,7 @@ class AudioLM:
         fine_acoustic_transformer: FineAcousticTransformer,
         # https://stackoverflow.com/a/53797072
         *,
-        audio_len=6,
+        audio_len=1,
         # We set Q' = 4 such that we predict the flattened tokens corresponding
         # to the coarse 4 layers in the second stage.
         n_coarse_quantizers=4,
@@ -47,7 +47,7 @@ class AudioLM:
         self.n_coarse_quantizers = n_coarse_quantizers
         self.n_fine_quantizers = n_fine_quantizers
 
-    def generate(self, x: torch.Tensor):
+    def generate(self, x: torch.Tensor, audiolen: int = 3):
         # Add dimension at the beginning to simulate being a batch
         # to conform with the rest of the API
         semantic_encode = self.semantic_encoder(x)
@@ -58,12 +58,12 @@ class AudioLM:
         coarse_acoustic_tokens, fine_acoustic_tokens, audio_scales = (
             self.acoustic_encoder_decoder.encode(x)
         )
-        print(f"coarse_acoustic_tokens.shape = {coarse_acoustic_tokens.shape}")
+        # print(f"coarse_acoustic_tokens.shape = {coarse_acoustic_tokens.shape}")
         coarse_conditioning = torch.cat((semantic_token, coarse_acoustic_tokens), dim=1)
         coarse_tokens = self.coarse_acoustic_transformer.generate(
             coarse_conditioning, self.audio_len * 75
         )
-        print(f"coarse_tokens.shape = {coarse_tokens.shape}")
+        # print(f"coarse_tokens.shape = {coarse_tokens.shape}")
 
         # print(f"Coarse conditioning {coarse_tokens.shape}")
         # if self.fine_acoustic_transformer:
