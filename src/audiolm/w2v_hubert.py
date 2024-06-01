@@ -147,8 +147,10 @@ class W2VHuBert(nn.Module):
                 output_layer=self.layer,
             )["x"]
             # print(embeddings.shape)
-            expand_cluster = self.clusters.unsqueeze(0).expand(
-                embeddings.size(0), -1, -1
+            expand_cluster = (
+                self.clusters.unsqueeze(0)
+                .expand(embeddings.size(0), -1, -1)
+                .to(self.device)
             )
             # print(expand_cluster.shape)
             assert embeddings.size(0) == expand_cluster.size(0) and embeddings.size(
