@@ -119,7 +119,7 @@ class Trainer(ABC):
                 model, epoch, self.optimizer, self.early_stop_counter, self.save_path
             )
             writer.add_scalars(
-                main_tag="Loss",
+                main_tag=f"Loss_{type(model.__name__)}",
                 tag_scalar_dict={
                     "train_loss": train_loss,
                     "validation_loss": validation_loss,

@@ -105,16 +105,15 @@ class TransformerDecoderOnly(nn.Module):
                 next_token = torch.multinomial(
                     probs, num_samples=1
                 )  # sample from the distribution
-                #token_generated = torch.cat([prompt_ids, next_token], dim=1)
+                # token_generated = torch.cat([prompt_ids, next_token], dim=1)
                 next_token_list.append(next_token)
 
-            #terminato il ciclo for prende il prompt e concatena i token generati
+            # terminato il ciclo for prende il prompt e concatena i token generati
             next_token_list = torch.Tensor(next_token_list)
             prompt_ids_type = prompt_ids.type()
             if prompt_ids_type != next_token_list.type():
                 next_token_list = next_token_list.type(prompt_ids_type)
-            next_token_list = next_token_list.unsqueeze(0) 
-        
+            next_token_list = next_token_list.unsqueeze(0)
 
             return next_token_list
 
@@ -142,22 +141,67 @@ class PositionalEncoding(nn.Module):
 class SemanticTransformer(TransformerDecoderOnly):
     """Specialized form of TransformerDecoderOnly for Semantic transformations."""
 
-    def __init__(self):
-        super().__init__(500, 768)
+    def __init__(
+        self,
+        vocab_size=500,
+        embed_dim=768,
+        num_heads=16,
+        layers=12,
+        feedforward_dim=4096,
+        attn_dropout_prob=0.1,
+    ):
+        super().__init__(
+            vocab_size,
+            embed_dim,
+            num_heads=num_heads,
+            layers=layers,
+            feedforward_dim=feedforward_dim,
+            attn_dropout_prob=attn_dropout_prob,
+        )
 
 
 class CoarseAcousticTransformer(TransformerDecoderOnly):
     """Specialized form of TransformerDecoderOnly for Coarse Acoustic transformations."""
 
-    def __init__(self):
-        super().__init__(1024, 1024)
+    def __init__(
+        self,
+        vocab_size=1024,
+        embed_dim=1024,
+        num_heads=16,
+        layers=12,
+        feedforward_dim=4096,
+        attn_dropout_prob=0.1,
+    ):
+        super().__init__(
+            vocab_size,
+            embed_dim,
+            num_heads=num_heads,
+            layers=layers,
+            feedforward_dim=feedforward_dim,
+            attn_dropout_prob=attn_dropout_prob,
+        )
 
 
 class FineAcousticTransformer(TransformerDecoderOnly):
     """Specialized form of TransformerDecoderOnly for Fine Acoustic transformations."""
 
-    def __init__(self):
-        super().__init__(1024, 1024)
+    def __init__(
+        self,
+        vocab_size=1024,
+        embed_dim=1024,
+        num_heads=16,
+        layers=12,
+        feedforward_dim=4096,
+        attn_dropout_prob=0.1,
+    ):
+        super().__init__(
+            vocab_size,
+            embed_dim,
+            num_heads=num_heads,
+            layers=layers,
+            feedforward_dim=feedforward_dim,
+            attn_dropout_prob=attn_dropout_prob,
+        )
 
 
 def initialize_transformer_from_gpt(

@@ -2,7 +2,6 @@
 
 import os
 from pathlib import Path
-import copy
 
 import torch
 import torch.nn.functional as F
@@ -11,12 +10,10 @@ from torch.utils.data import DataLoader, Dataset, random_split
 
 
 def padding_audio(audio, max_len):
+    """If the dimension of `audio` is less than `max_len` the audio gets padded up to max_len"""
     padding = max_len - audio.size(1)
     audio = F.pad(audio, (0, padding), "constant", 0)
     return audio
-
-
-# TODO: Necessaria la attention mask per il transformer??
 
 
 class AudioDataset(Dataset):

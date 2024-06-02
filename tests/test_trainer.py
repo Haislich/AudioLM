@@ -109,7 +109,7 @@ class TestCoarseAcousticTransformerTrainer(unittest.TestCase):
             coarse_acoustic_transformer=coarse_acoustic_transformer,
             train_dataloader=dataloader,
             val_dataloader=dataloader,
-            test_dataloader=dataloader,
+            test_dataloader=None,
             loss=loss,
             optimizer=optimizer,
             intervals=intervals,
