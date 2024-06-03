@@ -258,6 +258,7 @@ class CoarseAcousticTrainer(Trainer):
         save_path: Path,
         early_stop_counter: int,
         early_stopping_range: int,
+        generate_audio_len:int,
         epochs: int,
     ):
         """
@@ -307,14 +308,17 @@ class CoarseAcousticTrainer(Trainer):
             save_path=save_path,
             early_stop_counter=early_stop_counter,
             early_stopping_range=early_stopping_range,
+            generate_audio_len=generate_audio_len,
             epochs=epochs,
         )
 
     def loss_generator(self, batch):
 
         semantic_encode = self.semantic_encoder(batch)
-        semantic_token = self.semantic_transformer.generate(semantic_encode, 3)
-
+        semantic_token = self.semantic_transformer.generate(
+            semantic_encode, self.generate_audio_len * 50
+        )
+        
         coarse_acoustic_tokens, _, _ = self.acoustic_encoder_decoder.encode(batch)
 
         conditioning = torch.cat((semantic_token, coarse_acoustic_tokens), dim=1)
@@ -350,6 +354,7 @@ class FineAcousticTrainer(Trainer):
         save_path: Path,
         early_stop_counter: int,
         early_stopping_range: int,
+        generate_audio_len:int,
         epochs: int,
     ):
         """
@@ -402,17 +407,18 @@ class FineAcousticTrainer(Trainer):
             early_stopping_range=early_stopping_range,
             epochs=epochs,
         )
+        self.generate_audio_len = generate_audio_len
 
     def loss_generator(self, batch):
         semantic_encode = self.semantic_encoder(batch)
-        semantic_token = self.semantic_transformer.generate(semantic_encode, 3)
+        semantic_token = self.semantic_transformer.generate(semantic_encode, self.generate_audio_len * 50)
 
         coarse_acoustic_tokens, fine_acoustic_tokens, _ = (
             self.acoustic_encoder_decoder.encode(batch)
         )
         coarse_conditioning = torch.cat((semantic_token, coarse_acoustic_tokens), dim=1)
         coarse_tokens = self.coarse_acoustic_transformer.generate(
-            coarse_conditioning, 3
+            coarse_conditioning, self.generate_audio_len * 75
         )
 
         output, target = self.fine_acoustic_transformer(
