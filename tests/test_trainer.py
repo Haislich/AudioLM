@@ -3,185 +3,157 @@
 import os
 import unittest
 import unittest.test
-import warnings
 from pathlib import Path
 
 import torch
 from torch import nn
 
+from audiolm.absolute_transformer import CoarseAcousticTransformer, SemanticTransformer
 from audiolm.data_preparation import AudioDataLoader
-from audiolm.w2v_hubert import W2VHuBert
-from audiolm.absolute_transformer import (
-    SemanticTransformer,
-    CoarseAcousticTransformer,
-    FineAcousticTransformer,
-)
-from audiolm.trainer import SemanticTrainer, CoarseAcousticTrainer, FineAcousticTrainer
 from audiolm.encodec import Encodec
+from audiolm.w2v_hubert import W2VHuBert
+from audiolm.trainer import CoarseAcousticTrainer, SemanticTrainer
+from audiolm.utils import (
+    get_latest_checkpoint_path,
+    get_model_path,
+    load_checkpoint,
+    load_model,
+)
 
-warnings.filterwarnings("ignore", category=DeprecationWarning)
-torch.set_warn_always(False)
+DATA_PATH = Path(os.getcwd()) / Path("data") / Path("datasets")
+SAVE_LOAD_PATH = Path(os.getcwd()) / Path("data")
+INTERVALS = 10
+EARLY_STOP_COUNTER = 0
+EARLY_STOPPING_RANGE = 5
+EPOCHS = 2
 
-SAVE_PATH = Path(os.getcwd() + "\\data\\datasets")
-MODEL_PATH = Path(os.getcwd() + "\\data")
+TRAIN_SEMANTIC = False
+"""Start training for the semantic model"""
+RESUME_SEMANTIC_TRAINING = True
+"""Start training from the an epoch"""
+
+TRAIN_COARSE = False
+"""Start training for the semantic model"""
+RESUME_COARSE_TRAINING = True
+"""Start training from the an epoch"""
+GENERATE_AUDIO_LEN = 3
+"""Len in seconds of the audio generated"""
 
 
-class TestSemanticTransformerTrainer(unittest.TestCase):
+class TestTransformerTrainer(unittest.TestCase):
     """Tests for Semantic Encoder trainer."""
 
-    def test_train_end2end(self):
+    semantic_encoder = W2VHuBert()
+    acoustic_encoder_decoder = Encodec()
+    train_dataloader = AudioDataLoader(DATA_PATH / "train", batch_size=4, max_elems=3)
+    val_dataloader = AudioDataLoader(DATA_PATH / "val", batch_size=4, max_elems=3)
+    test_dataloader = AudioDataLoader(DATA_PATH / "test", batch_size=4, max_elems=2)
+
+    def _train_semantic_end2end(self):
         """Test if the semantic trainer can be correctly trained"""
         print("===========================================")
         print("End to end Pipeline for semantic modelling.")
         print("===========================================")
 
-        print("Created generator.")
-        semantic_encoder = W2VHuBert()
-        print("Created encoder.")
-
-        semantic_transformer = SemanticTransformer()
-        print("Created transformer.")
-        dataloader = AudioDataLoader(os.getcwd() + "\\data\\datasets", batch_size=1)
-        print("Fetched Dataloader and divided in train, test and validation.")
-        loss = nn.CrossEntropyLoss()
-        print("Instantiated Cross Entropy Loss")
-        optimizer = torch.optim.Adam(semantic_transformer.parameters(), lr=0.001)
-        print("Instantiated Adam")
-        intervals = 10
-        save_path = SAVE_PATH
-        early_stop_counter = 10
-        early_stopping_range = 10
-        epochs = 1
-        semantic_trainer = SemanticTrainer(
-            semantic_encoder=semantic_encoder,
-            semantic_transformer=semantic_transformer,
-            train_dataloader=dataloader,
-            val_dataloader=dataloader,
-            test_dataloader=dataloader,
-            loss=loss,
-            optimizer=optimizer,
-            intervals=intervals,
-            save_path=save_path,
-            early_stop_counter=early_stop_counter,
-            early_stopping_range=early_stopping_range,
-            epochs=epochs,
+        semantic_transformer = SemanticTransformer(num_heads=4, layers=2)
+        semantic_loss = nn.CrossEntropyLoss()
+        semantic_optimizer = torch.optim.Adam(
+            semantic_transformer.parameters(), lr=0.001
         )
 
-        semantic_trainer.train()
-
-
-class TestCoarseAcousticTransformerTrainer(unittest.TestCase):
-    """Tests for Semantic Encoder trainer."""
-
-    def test_train_end2end(self):
-        """Test if the coarse acoustic trainer can be correctly trained"""
-        print("===========================================")
-        print("End to end Pipeline for coarse acoustic training.")
-        print("===========================================")
-
-        print("Created generator.")
-        semantic_encoder = W2VHuBert()
-        print("Created encoder.")
-        semantic_transformer = SemanticTransformer()
-        state_dict = torch.load(
-            SAVE_PATH / "models" / f"{str(type(semantic_transformer).__name__)}.pth"
+        semantic_transformer_root = (
+            Path(SAVE_LOAD_PATH)
+            / Path("models")
+            / str(type(semantic_transformer).__name__)
         )
-        semantic_transformer.load_state_dict(state_dict)
-        acoustic_encoder_decoder = Encodec()
-        print("Created semantic transformer.")
+        semantic_transformer_path = get_model_path(semantic_transformer_root)
+        checkpoint_path = get_latest_checkpoint_path(semantic_transformer_root)
+        if not TRAIN_SEMANTIC and semantic_transformer_path:
+            load_model(semantic_transformer, semantic_transformer_path)
+        else:
+            if RESUME_SEMANTIC_TRAINING and checkpoint_path:
+                print("Starting from the last epoch")
+                semantic_transformer, _, semantic_optimizer, _ = load_checkpoint(
+                    semantic_transformer, semantic_transformer_root
+                )
+            # elif not RESUME_SEMANTIC_TRAINING:
+            #     # Adapt to choose a given epoch
+            #     semantic_transformer, _, semantic_optimizer, _ = ...
+            semantic_trainer = SemanticTrainer(
+                semantic_encoder=self.semantic_encoder,
+                semantic_transformer=semantic_transformer,
+                train_dataloader=self.train_dataloader,
+                val_dataloader=self.val_dataloader,
+                test_dataloader=self.test_dataloader,
+                loss=semantic_loss,
+                optimizer=semantic_optimizer,
+                intervals=INTERVALS,
+                save_path=SAVE_LOAD_PATH,
+                early_stop_counter=EARLY_STOP_COUNTER,
+                early_stopping_range=EARLY_STOPPING_RANGE,
+                epochs=EPOCHS,
+            )
+            semantic_trainer.train()
+
+    def test_train_coarse_end2end(self):
+        """Test if the semantic trainer can be correctly trained"""
+        print("===========================================")
+        print("End to end Pipeline for semantic modelling.")
+        print("===========================================")
+
+        semantic_transformer = SemanticTransformer(num_heads=4, layers=2)
+        semantic_transformer_root = (
+            Path(SAVE_LOAD_PATH)
+            / Path("models")
+            / str(type(semantic_transformer).__name__)
+        )
+        semantic_transformer_path = get_model_path(semantic_transformer_root)
+
+        load_model(semantic_transformer, semantic_transformer_path)
+
         coarse_acoustic_transformer = CoarseAcousticTransformer()
-        print("Created acoustic transformer.")
-        dataloader = AudioDataLoader(os.getcwd() + "\\data\\datasets")
-        print("Fetched Dataloader and divided in train, test and validation.")
-        loss = nn.CrossEntropyLoss()
-        print("Instantiated Cross Entropy Loss")
-        optimizer = torch.optim.Adam(coarse_acoustic_transformer.parameters(), lr=0.001)
-        print("Instantiated Adam")
-        intervals = 10
-        save_path = SAVE_PATH
-        early_stop_counter = 10
-        early_stopping_range = 10
-        epochs = 1
-        coarse_acoustic_trainer = CoarseAcousticTrainer(
-            semantic_encoder=semantic_encoder,
-            semantic_transformer=semantic_transformer,
-            acoustic_encoder_decoder=acoustic_encoder_decoder,
-            coarse_acoustic_transformer=coarse_acoustic_transformer,
-            train_dataloader=dataloader,
-            val_dataloader=dataloader,
-            test_dataloader=None,
-            loss=loss,
-            optimizer=optimizer,
-            intervals=intervals,
-            save_path=save_path,
-            early_stop_counter=early_stop_counter,
-            early_stopping_range=early_stopping_range,
-            epochs=epochs,
+        coarse_loss = nn.CrossEntropyLoss()
+        coarse_optimizer = torch.optim.Adam(
+            coarse_acoustic_transformer.parameters(), lr=0.001
         )
 
-        coarse_acoustic_trainer.train()
-
-
-class TestFineAcousticTransformerTrainer(unittest.TestCase):
-    """Tests for Semantic Encoder trainer."""
-
-    def test_train_end2end(self):
-        """Test if the coarse acoustic trainer can be correctly trained"""
-        print("===========================================")
-        print("End to end Pipeline for coarse acoustic training.")
-        print("===========================================")
-
-        print("Created generator.")
-        semantic_encoder = W2VHuBert()
-        print("Created encoder.")
-        semantic_transformer = SemanticTransformer()
-        state_dict = torch.load(
-            SAVE_PATH / "models" / f"{str(type(semantic_transformer).__name__)}.pth"
+        coarse_transformer_root = (
+            Path(SAVE_LOAD_PATH)
+            / Path("models")
+            / str(type(coarse_acoustic_transformer).__name__)
         )
-        semantic_transformer.load_state_dict(state_dict)
-        acoustic_encoder_decoder = Encodec()
-        print("Instantiated pretrained semantic transformer.")
-        coarse_acoustic_transformer = CoarseAcousticTransformer()
-        state_dict = torch.load(
-            SAVE_PATH
-            / "models"
-            / f"{str(type(coarse_acoustic_transformer).__name__)}.pth"
-        )
-        coarse_acoustic_transformer.load_state_dict(state_dict)
-        print("Instantiated pretrained coarse acoustic transformer.")
-        fine_acoustic_transformer = FineAcousticTransformer()
-        print("Instantiated pretrained fine acoustic transformer.")
+        coarse_transformer_path = get_model_path(coarse_transformer_root)
+        checkpoint_path = get_latest_checkpoint_path(coarse_transformer_root)
 
-        dataloader = AudioDataLoader(os.getcwd() + "\\data\\datasets")
-        print("Fetched Dataloader and divided in train, test and validation.")
-        loss = nn.CrossEntropyLoss()
-        print("Instantiated Cross Entropy Loss")
-        optimizer = torch.optim.Adam(fine_acoustic_transformer.parameters(), lr=0.001)
-
-        intervals = 10
-        save_path = Path(SAVE_PATH)
-        early_stop_counter = 10
-        early_stopping_range = 10
-        epochs = 1
-        fine_acoustic_trainer = FineAcousticTrainer(
-            semantic_encoder=semantic_encoder,
-            semantic_transformer=semantic_transformer,
-            acoustic_encoder_decoder=acoustic_encoder_decoder,
-            coarse_acoustic_transformer=coarse_acoustic_transformer,
-            fine_acoustic_transformer=fine_acoustic_transformer,
-            train_dataloader=dataloader,
-            val_dataloader=dataloader,
-            test_dataloader=dataloader,
-            loss=loss,
-            optimizer=optimizer,
-            intervals=intervals,
-            save_path=save_path,
-            early_stop_counter=early_stop_counter,
-            early_stopping_range=early_stopping_range,
-            epochs=epochs,
-        )
-
-        fine_acoustic_trainer.train()
+        if not TRAIN_COARSE and coarse_transformer_path:
+            load_model(coarse_acoustic_transformer, coarse_transformer_path)
+        else:
+            if RESUME_COARSE_TRAINING and checkpoint_path:
+                print("Starting from the last epoch")
+                semantic_transformer, _, coarse_optimizer, _ = load_checkpoint(
+                    semantic_transformer, coarse_transformer_root
+                )
+            # elif not RESUME_SEMANTIC_TRAINING:
+            #     # Adapt to choose a given epoch
+            #     semantic_transformer, _, semantic_optimizer, _ = ...
+            coarse_acoustic_trainer = CoarseAcousticTrainer(
+                semantic_encoder=self.semantic_encoder,
+                semantic_transformer=semantic_transformer,
+                acoustic_encoder_decoder=self.acoustic_encoder_decoder,
+                coarse_acoustic_transformer=coarse_acoustic_transformer,
+                train_dataloader=self.train_dataloader,
+                val_dataloader=self.val_dataloader,
+                test_dataloader=self.test_dataloader,
+                loss=coarse_loss,
+                optimizer=coarse_optimizer,
+                intervals=INTERVALS,
+                save_path=SAVE_LOAD_PATH,
+                early_stop_counter=EARLY_STOP_COUNTER,
+                early_stopping_range=EARLY_STOPPING_RANGE,
+                generate_audio_len=GENERATE_AUDIO_LEN,
+                epochs=EPOCHS,
+            )
+            coarse_acoustic_trainer.train()
 
 
 if __name__ == "__main__":

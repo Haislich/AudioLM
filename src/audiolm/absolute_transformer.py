@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from transformers import GPT2LMHeadModel
+from audiolm.constants import DEVICE
 
 
 class TransformerDecoderOnly(nn.Module):
@@ -46,13 +47,11 @@ class TransformerDecoderOnly(nn.Module):
         self.dim_model = embed_dim
         self.fc_out = nn.Linear(embed_dim, vocab_size)
 
-
     def __getname__(self):
         return self.__name__
 
     def __change_name__(self, new_name):
         self.__name__ = new_name
-
 
     def forward(self, tgt, memory=None, tgt_mask=None, tgt_key_padding_mask=None):
         tgt = self.embedding_table(tgt) * math.sqrt(self.dim_model)
@@ -73,19 +72,17 @@ class TransformerDecoderOnly(nn.Module):
 
     def generate_causal_mask(self, seq_len=None):
         assert seq_len, "seq_len cannot be None"
-        mask = torch.triu(torch.ones((seq_len, seq_len)), diagonal=1).bool()
+        mask = torch.triu(torch.ones((seq_len, seq_len)), diagonal=1).bool().to(DEVICE)
         # mask = mask.unsqueeze(0).repeat((2, 1, 1))
         return mask
 
     def fit(self, batch):
         # teacher forcing, shift the input by one position in order to predict the next token
-        input_token = batch[:, :-1].to(self.device)
-        target_token = batch[:, 1:].to(self.device)
+        input_token = batch[:, :-1]
+        target_token = batch[:, 1:]
 
         # generate causal mask to prevent the model from attending to future tokens
-        causal_mask = self.generate_causal_mask(seq_len=input_token.size(1)).to(
-            self.device
-        )
+        causal_mask = self.generate_causal_mask(seq_len=input_token.size(1))
 
         # forward pass
         # we pass the input to the DecoderOnly and the casual mask, so at time-i
@@ -115,7 +112,7 @@ class TransformerDecoderOnly(nn.Module):
                     probs, num_samples=1
                 )  # sample from the distribution
                 prompt_ids = torch.cat([prompt_ids, next_token], dim=1)
-            
+
             return prompt_ids
 
 
@@ -267,10 +264,4 @@ def initialize_transformer_from_gpt(
         initialized_model.fc_out.weight[:vocab_size, :] = (
             gpt_pretrained_model.lm_head.weight.data[:vocab_size, :]
         )
-
-    # print("Model initialized from GPT2")
-    # print(
-    #     f"Hyperparameters: d_model={d_model}, nhead={nhead}, num_layers={num_layers}, dim_feedforward={dim_feedforward}"
-    # )
-
     return initialized_model

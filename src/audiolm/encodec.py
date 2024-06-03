@@ -1,5 +1,6 @@
 """This module contains a custom definition of the Meta `EnCodec` model."""
 
+import warnings
 from typing import Optional, Tuple
 import torch
 from torch import nn
@@ -18,7 +19,9 @@ class Encodec(nn.Module):
 
         """
         super().__init__()
-        self.model = EncodecModel.from_pretrained("facebook/encodec_24khz")
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=UserWarning)
+            self.model = EncodecModel.from_pretrained("facebook/encodec_24khz")
 
     def forward(self, *_, **__) -> torch.Tensor:
         """
@@ -45,7 +48,7 @@ class Encodec(nn.Module):
         with torch.no_grad():
             for batch in input_values:
                 # https://github.com/facebookresearch/encodec/tree/main#extracting-discrete-representations
-                # TODO: Understand the mapping of the codebooks
+
                 encoded_frames = self.model.encode(batch.unsqueeze(0), bandwidth=6)
                 # Remove the useless dimensions
                 codes = encoded_frames.audio_codes.squeeze((0, 1))
@@ -74,3 +77,6 @@ class Encodec(nn.Module):
     ):
         """Decodes the given frames into an output audio waveform."""
         return self.model.decode(audio_codes, audio_scales, padding_mask, None)
+
+
+Encodec()

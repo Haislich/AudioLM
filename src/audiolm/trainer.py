@@ -1,25 +1,27 @@
-"""Train module"""
+"""Definition for trainer classes"""
 
 import os
+from math import ceil
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
 
-import torch
-from torch import nn
 from torch.utils.tensorboard import SummaryWriter
 from tqdm.auto import tqdm
+
+import torch
+from torch import nn
 
 from audiolm.encodec import Encodec
 from audiolm.constants import DEVICE
 from audiolm.data_preparation import AudioDataLoader
 from audiolm.w2v_hubert import W2VHuBert
+from audiolm.utils import save_checkpoint, save_model
 from audiolm.absolute_transformer import (
     SemanticTransformer,
     CoarseAcousticTransformer,
     FineAcousticTransformer,
 )
-from audiolm.utils import save_checkpoint, save_model, load_checkpoint
 
 
 class Trainer(ABC):
@@ -87,7 +89,11 @@ class Trainer(ABC):
     def _train_step(self, model: nn.Module) -> float:
         model.train()
         train_loss = 0
-        for batch in self.train_dataloader:
+
+        for batch in tqdm(
+            self.train_dataloader,
+            total=ceil(len(self.train_dataloader) / self.train_dataloader.batch_size),
+        ):
             batch = batch.to(DEVICE)
             loss = self.loss_generator(batch)
             train_loss += loss.item()
@@ -111,22 +117,19 @@ class Trainer(ABC):
         return validation_loss
 
     def _train(self, model: nn.Module):
-        writer = SummaryWriter(Path(self.save_path) / "runs")
-        # model_path = Path(f"{self.save_path} / models")
-        # checkpoints = list(model_path.glob("*.pth"))
-        # if checkpoints:
-        #     model, epoch, self.optimizer, self.early_stop_counter = load_checkpoint(
-        #         model, self.save_path, latest=True
-        #     )
-
-        for epoch in tqdm(range(self.epochs), desc="Training"):
+        writer = SummaryWriter(
+            Path(self.save_path) / "runs" / str(type(model).__name__)
+        )
+        for epoch in tqdm(range(self.epochs), total=self.epochs, desc="Training"):
             train_loss = self._train_step(model)
             validation_loss = self._validation_step(model)
+            print("SAVING CHECKPOINT...")
             save_checkpoint(
                 model, epoch, self.optimizer, self.early_stop_counter, self.save_path
             )
+            print("SAVING RUN FOR TENSORBOARD...")
             writer.add_scalars(
-                main_tag=f"Loss_{type(model.__name__)}",
+                main_tag=f"Loss_{str(type(model).__name__)}",
                 tag_scalar_dict={
                     "train_loss": train_loss,
                     "validation_loss": validation_loss,
@@ -141,7 +144,7 @@ class Trainer(ABC):
                 self.early_stop_counter += 1
 
             if self.early_stop_counter >= self.early_stopping_range:
-                # print(f"Early stopping training at epoch: {epoch+1}")
+                print(f"Early stopping training at epoch: {epoch+1}")
                 break
         writer.flush()
         writer.close()
@@ -157,15 +160,13 @@ class Trainer(ABC):
                 test_loss += loss.item()
 
         test_loss /= len(self.test_dataloader)
-        # print(f"Test Loss: {test_loss: .4f}")
+        print(f"Test Loss: {test_loss: .4f}")
 
         return test_loss
-    
 
     # endregion
 
 
-# pylint: disable =too-many-arguments
 class SemanticTrainer(Trainer):
     """Trainer class derived from `Trainer`."""
 
@@ -231,6 +232,8 @@ class SemanticTrainer(Trainer):
             early_stopping_range=early_stopping_range,
             epochs=epochs,
         )
+        semantic_encoder = semantic_encoder.to(DEVICE)
+        semantic_transformer = semantic_transformer.to(DEVICE)
 
     def loss_generator(self, batch):
         semantic_encode = self.semantic_encoder(batch)
@@ -247,7 +250,6 @@ class SemanticTrainer(Trainer):
         return self._test(self.semantic_transformer)
 
 
-# pylint: disable =too-many-arguments
 class CoarseAcousticTrainer(Trainer):
     """Trainer class derived from `Trainer`."""
 
@@ -266,7 +268,7 @@ class CoarseAcousticTrainer(Trainer):
         save_path: Path,
         early_stop_counter: int,
         early_stopping_range: int,
-        generate_audio_len:int,
+        generate_audio_len: int,
         epochs: int,
     ):
         """
@@ -302,6 +304,7 @@ class CoarseAcousticTrainer(Trainer):
 
             `epochs` (int)
         """
+
         super().__init__(
             semantic_encoder=semantic_encoder,
             semantic_transformer=semantic_transformer,
@@ -316,9 +319,13 @@ class CoarseAcousticTrainer(Trainer):
             save_path=save_path,
             early_stop_counter=early_stop_counter,
             early_stopping_range=early_stopping_range,
-            generate_audio_len=generate_audio_len,
             epochs=epochs,
         )
+        semantic_encoder = semantic_encoder.to(DEVICE)
+        semantic_transformer = semantic_transformer.to(DEVICE)
+        acoustic_encoder_decoder = acoustic_encoder_decoder.to(DEVICE)
+        coarse_acoustic_transformer = coarse_acoustic_transformer.to(DEVICE)
+        self.generate_audio_len = generate_audio_len
 
     def loss_generator(self, batch):
 
@@ -326,13 +333,11 @@ class CoarseAcousticTrainer(Trainer):
         semantic_token = self.semantic_transformer.generate(
             semantic_encode, self.generate_audio_len * 50
         )
-        
-        coarse_acoustic_tokens, _, _ = self.acoustic_encoder_decoder.encode(batch)
 
+        coarse_acoustic_tokens, _, _ = self.acoustic_encoder_decoder.encode(batch)
         conditioning = torch.cat((semantic_token, coarse_acoustic_tokens), dim=1)
 
         output, target = self.coarse_acoustic_transformer.fit(conditioning)
-
         loss = self.loss(output, target)
         return loss
 
@@ -341,102 +346,3 @@ class CoarseAcousticTrainer(Trainer):
 
     def test(self):
         return self._test(self.coarse_acoustic_transformer)
-
-
-class FineAcousticTrainer(Trainer):
-    """Trainer class derived from `Trainer`."""
-
-    def __init__(
-        self,
-        semantic_encoder: W2VHuBert,
-        semantic_transformer: SemanticTransformer,
-        acoustic_encoder_decoder: Encodec,
-        coarse_acoustic_transformer: CoarseAcousticTransformer,
-        fine_acoustic_transformer: FineAcousticTransformer,
-        train_dataloader: AudioDataLoader,
-        val_dataloader: AudioDataLoader,
-        test_dataloader: AudioDataLoader,
-        loss: nn.Module,
-        optimizer: torch.optim.Optimizer,
-        intervals: int,
-        save_path: Path,
-        early_stop_counter: int,
-        early_stopping_range: int,
-        generate_audio_len:int,
-        epochs: int,
-    ):
-        """
-        Takes as input `semantic_encoder` and `semantic_transformer`.
-        They determine the `semantic_modelling`.
-
-        `semantic_encoder` must be trained ahead of time, this trainer only
-        trains `semantic_transformer`.
-
-        Args
-        ----
-            `semantic_encoder` (W2VHuBert)
-
-            `semantic_transformer` (TransformerDecoderOnly)
-
-            `train_dataloader` (AudioDataLoader)
-
-            `val_dataloader` (AudioDataLoader)
-
-            `test_dataloader` (AudioDataLoader)
-
-            `loss` (nn.Module)
-
-            `optimizer` (torch.optim.Optimizer)
-
-            `intervals` (int)
-
-            `save_path` (Path)
-
-            `early_stop_counter` (int)
-
-            `early_stopping_range` (int)
-
-            `epochs` (int)
-        """
-        super().__init__(
-            semantic_encoder=semantic_encoder,
-            semantic_transformer=semantic_transformer,
-            acoustic_encoder_decoder=acoustic_encoder_decoder,
-            coarse_acoustic_transformer=coarse_acoustic_transformer,
-            fine_acoustic_transformer=fine_acoustic_transformer,
-            train_dataloader=train_dataloader,
-            val_dataloader=val_dataloader,
-            test_dataloader=test_dataloader,
-            loss=loss,
-            optimizer=optimizer,
-            intervals=intervals,
-            save_path=save_path,
-            early_stop_counter=early_stop_counter,
-            early_stopping_range=early_stopping_range,
-            epochs=epochs,
-        )
-        self.generate_audio_len = generate_audio_len
-
-    def loss_generator(self, batch):
-        semantic_encode = self.semantic_encoder(batch)
-        semantic_token = self.semantic_transformer.generate(semantic_encode, self.generate_audio_len * 50)
-
-        coarse_acoustic_tokens, fine_acoustic_tokens, _ = (
-            self.acoustic_encoder_decoder.encode(batch)
-        )
-        coarse_conditioning = torch.cat((semantic_token, coarse_acoustic_tokens), dim=1)
-        coarse_tokens = self.coarse_acoustic_transformer.generate(
-            coarse_conditioning, self.generate_audio_len * 75
-        )
-
-        output, target = self.fine_acoustic_transformer(
-            torch.cat((coarse_tokens, fine_acoustic_tokens), dim=1)
-        )
-        loss = self.loss(output, target)
-        return loss
-
-    def train(self):
-        return self._train(self.fine_acoustic_transformer)
-
-    def test(self):
-        return self._test(self.fine_acoustic_transformer)

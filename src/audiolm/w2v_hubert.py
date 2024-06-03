@@ -1,7 +1,9 @@
+"""This module contains the definition of the W2V_Hubert model"""
+
 import logging
 import os
 from math import ceil
-
+import warnings
 import fairseq
 import joblib
 import requests
@@ -10,17 +12,15 @@ import torchaudio.functional as F
 from torch import nn
 from tqdm.auto import tqdm
 
-from audiolm.constants import CACHE_PATH
+from audiolm.constants import CACHE_PATH, DEVICE
 from audiolm.data_preparation import AudioDataLoader
 
 # region: Utils functions
 
 logging.getLogger("fairseq").setLevel(logging.CRITICAL)
-logging.getLogger("pytorch").setLevel(logging.CRITICAL)
 
 
-def load_checkpoint():
-
+def _load_checkpoint():
     checkpoint_path = CACHE_PATH / "W2V_Hubert" / "model"
     if not checkpoint_path.exists():
         os.makedirs(checkpoint_path)
@@ -69,15 +69,16 @@ def load_checkpoint():
                     for chunk in response.iter_content(chunk_size=8196):
                         progress_bar.update(len(chunk))
                         file.write(chunk)
-
-    torch_check = torch.load(checkpoint)
-    models, _, _ = fairseq.checkpoint_utils.load_model_ensemble_and_task(
-        {str(checkpoint): torch_check}
-    )
-    model = models[0]
-    # print("Modello caricato")
-    kmeans = joblib.load(quantizer)
-    # print("Kmeans caricato")
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning)
+        torch_check = torch.load(checkpoint)
+        models, _, _ = fairseq.checkpoint_utils.load_model_ensemble_and_task(
+            {str(checkpoint): torch_check}
+        )
+        model = models[0]
+        # print("Modello caricato")
+        kmeans = joblib.load(quantizer)
+        # print("Kmeans caricato")
 
     return model, kmeans
 
@@ -113,14 +114,12 @@ class W2VHuBert(nn.Module):
         dataloader: AudioDataLoader = None,
     ):
         super().__init__()
-        self.model, self.kmeans = load_checkpoint()
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model.to(self.device)
+        self.model, self.kmeans = _load_checkpoint()
         self.dataloader = dataloader
         self.sample_frequency = sample_frequency
         self.input_audio_hz = input_audio_hz
         self.layer = 6
-        self.clusters = torch.from_numpy(self.kmeans.cluster_centers_)
+        self.clusters = torch.from_numpy(self.kmeans.cluster_centers_).to(DEVICE)
 
     def forward(self, input_audio):
         """
@@ -147,10 +146,8 @@ class W2VHuBert(nn.Module):
                 output_layer=self.layer,
             )["x"]
             # print(embeddings.shape)
-            expand_cluster = (
-                self.clusters.unsqueeze(0)
-                .expand(embeddings.size(0), -1, -1)
-                .to(self.device)
+            expand_cluster = self.clusters.unsqueeze(0).expand(
+                embeddings.size(0), -1, -1
             )
             # print(expand_cluster.shape)
             assert embeddings.size(0) == expand_cluster.size(0) and embeddings.size(
@@ -176,8 +173,6 @@ class W2VHuBert(nn.Module):
         ):
             # print(batch.shape)
             batch = batch.squeeze(1)
-            # print(batch.shape)
-            batch = batch.to(self.device)
             out = self.forward(batch)
             semantic_tokens.append(out)
 

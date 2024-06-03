@@ -26,8 +26,8 @@ datasets = "^2.19.0"
 soundfile = "^0.12.1"
 fairseq = "^0.12.2"
 iprogress = "^0.4"
-torch = "2.2.1"
-torchaudio = "2.2.1"
+torch = { url = "https://download.pytorch.org/whl/cu121/torch-2.3.0%2Bcu121-cp39-cp39-win_amd64.whl" }
+torchaudio = { url = "https://download.pytorch.org/whl/cu121/torchaudio-2.3.0%2Bcu121-cp39-cp39-win_amd64.whl" }
 pydantic = "^2.7.1"
 torchinfo = "^1.8.0"
 ipywidgets = "^8.1.2"
