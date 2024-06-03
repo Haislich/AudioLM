@@ -46,8 +46,19 @@ def save_checkpoint(
     )
 
 
+def load_model(model: nn.Module, model_path:os.PathLike):
+    if model_path.exists():
+        print("Model found")
+        return torch.load(Path(model_path))
+    
+    else: 
+        print("Model not found")
+        return None
+
+
+
 def load_checkpoint(
-    model, epoch, save_path
+    model, epoch, save_path, latest=True
 ) -> Tuple[nn.Module, int, torch.optim.Optimizer, int]:
     """
     Loads a checkpoint for a given model.
@@ -61,6 +72,9 @@ def load_checkpoint(
         tuple: A tuple containing the loaded model, epoch number, optimizer, and early stop counter.
     """
 
+    if latest:
+        epoch = get_latest_epoch(save_path) 
+
     model_name = str(type(model).__name__)
     checkpoint = Path(save_path) / "models" / f"{model_name}_epoch_{epoch+1}.pth"
 
@@ -72,8 +86,36 @@ def load_checkpoint(
     # print(
     #     f"Checkpoint loaded: {checkpoint}, starting from epoch: {checkpoint['epoch']+1}"
     # )
+    print(f"Checkpoint loaded: {checkpoint}, starting from epoch: {epoch+1}")
     return model, epoch, optimizer, early_stop_counter
 
+
+def get_latest_epoch(save_path: os.PathLike) -> int:
+    """
+    Get the latest epoch number from the checkpoint directory.
+
+    Args:
+        save_path (os.PathLike): The path to the checkpoint directory.
+
+    Returns:
+        int: The latest epoch number.
+    """
+    checkpoint_path = Path(save_path) / "models"
+    checkpoints_epoch = []
+    for c in checkpoint_path.glob("*.pth"):
+        try:
+            checkpoints_epoch.append(int(c.stem.split("_")[-1]))
+        except ValueError:
+            print(f"Skipping non-epoch file: {c.name}")
+    
+    if checkpoints_epoch:
+        latest_epoch = max(checkpoints_epoch)
+        print("Latest epoch found: ", latest_epoch)
+        return latest_epoch
+    else:
+        print("No checkpoints found")
+        return 0
+    
 
 def save_model(model: nn.Module, save_path: os.PathLike):
     """Saves the model state dict.
@@ -85,4 +127,4 @@ def save_model(model: nn.Module, save_path: os.PathLike):
     """
     model_path = Path(save_path) / "models" / f"{str(type(model).__name__)}.pth"
     torch.save(model.state_dict(), model_path)
-    # print(f"Model saved: {model_path}")
+    print(f"Model saved: {model_path}")

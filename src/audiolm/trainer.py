@@ -19,7 +19,7 @@ from audiolm.absolute_transformer import (
     CoarseAcousticTransformer,
     FineAcousticTransformer,
 )
-from audiolm.utils import save_checkpoint, save_model
+from audiolm.utils import save_checkpoint, save_model, load_checkpoint
 
 
 class Trainer(ABC):
@@ -112,6 +112,13 @@ class Trainer(ABC):
 
     def _train(self, model: nn.Module):
         writer = SummaryWriter(Path(self.save_path) / "runs")
+        # model_path = Path(f"{self.save_path} / models")
+        # checkpoints = list(model_path.glob("*.pth"))
+        # if checkpoints:
+        #     model, epoch, self.optimizer, self.early_stop_counter = load_checkpoint(
+        #         model, self.save_path, latest=True
+        #     )
+
         for epoch in tqdm(range(self.epochs), desc="Training"):
             train_loss = self._train_step(model)
             validation_loss = self._validation_step(model)
@@ -153,6 +160,7 @@ class Trainer(ABC):
         # print(f"Test Loss: {test_loss: .4f}")
 
         return test_loss
+    
 
     # endregion
 

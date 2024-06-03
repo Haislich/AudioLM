@@ -29,6 +29,8 @@ class TransformerDecoderOnly(nn.Module):
 
         self.positional_encoding = PositionalEncoding(embed_dim)
 
+        self.__name__ = "TransformerDecoderOnly"
+
         decoder_layer = nn.TransformerDecoderLayer(
             d_model=embed_dim,
             nhead=num_heads,
@@ -43,6 +45,14 @@ class TransformerDecoderOnly(nn.Module):
 
         self.dim_model = embed_dim
         self.fc_out = nn.Linear(embed_dim, vocab_size)
+
+
+    def __getname__(self):
+        return self.__name__
+
+    def __change_name__(self, new_name):
+        self.__name__ = new_name
+
 
     def forward(self, tgt, memory=None, tgt_mask=None, tgt_key_padding_mask=None):
         tgt = self.embedding_table(tgt) * math.sqrt(self.dim_model)
@@ -62,7 +72,7 @@ class TransformerDecoderOnly(nn.Module):
         return output
 
     def generate_causal_mask(self, seq_len=None):
-        assert seq_len, "se_len cannot be None"
+        assert seq_len, "seq_len cannot be None"
         mask = torch.triu(torch.ones((seq_len, seq_len)), diagonal=1).bool()
         # mask = mask.unsqueeze(0).repeat((2, 1, 1))
         return mask
@@ -149,6 +159,7 @@ class SemanticTransformer(TransformerDecoderOnly):
             feedforward_dim=feedforward_dim,
             attn_dropout_prob=attn_dropout_prob,
         )
+        self.__name__ = "SemanticTransformer"
 
 
 class CoarseAcousticTransformer(TransformerDecoderOnly):
@@ -171,6 +182,7 @@ class CoarseAcousticTransformer(TransformerDecoderOnly):
             feedforward_dim=feedforward_dim,
             attn_dropout_prob=attn_dropout_prob,
         )
+        self.__name__ = "CoarseAcousticTransformer"
 
 
 class FineAcousticTransformer(TransformerDecoderOnly):
