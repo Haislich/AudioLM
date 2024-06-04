@@ -49,7 +49,7 @@ class TestTransformerTrainer(unittest.TestCase):
     val_dataloader = AudioDataLoader(DATA_PATH / "val", batch_size=4, max_elems=3)
     test_dataloader = AudioDataLoader(DATA_PATH / "test", batch_size=4, max_elems=2)
 
-    def _train_semantic_end2end(self):
+    def test_train_semantic_end2end(self):
         """Test if the semantic trainer can be correctly trained"""
         print("===========================================")
         print("End to end Pipeline for semantic modelling.")
@@ -95,7 +95,7 @@ class TestTransformerTrainer(unittest.TestCase):
             )
             semantic_trainer.train()
 
-    def test_train_coarse_end2end(self):
+    def _train_coarse_end2end(self):
         """Test if the semantic trainer can be correctly trained"""
         print("===========================================")
         print("End to end Pipeline for semantic modelling.")
