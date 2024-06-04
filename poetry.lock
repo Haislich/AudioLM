@@ -3112,22 +3112,6 @@ test = ["appdirs (==1.4.4)", "covdefaults (>=2.3)", "pytest (>=7.4.3)", "pytest-
 type = ["mypy (>=1.8)"]
 
 [[package]]
-name = "plotext"
-version = "5.2.8"
-description = "plotext plots directly on terminal"
-optional = false
-python-versions = ">=3.5"
-files = [
-    {file = "plotext-5.2.8-py3-none-any.whl", hash = "sha256:7364cf72e6c9bffaf96158340fd2e0058faf404edbbc1e7a2aed421c8638d475"},
-    {file = "plotext-5.2.8.tar.gz", hash = "sha256:319a287baabeb8576a711995f973a2eba631c887aa6b0f33ab016f12c50ffebe"},
-]
-
-[package.extras]
-completion = ["shtab"]
-image = ["pillow (>=8.4)"]
-video = ["ffpyplayer (>=4.3.5)", "opencv-python (>=4.5.5)", "pafy (>=0.5.5)", "pillow (>=8.4)", "youtube-dl (==2020.12.2)"]
-
-[[package]]
 name = "portalocker"
 version = "2.8.2"
 description = "Wraps the portalocker recipe for easy usage"
@@ -4445,13 +4429,13 @@ files = [
 
 [[package]]
 name = "textual"
-version = "0.52.1"
+version = "0.64.0"
 description = "Modern Text User Interface framework"
 optional = false
-python-versions = ">=3.8,<4.0"
+python-versions = "<4.0,>=3.8"
 files = [
-    {file = "textual-0.52.1-py3-none-any.whl", hash = "sha256:960a19df2319482918b4a58736d9552cdc1ab65d170ba0bc15273ce0e1922b7a"},
-    {file = "textual-0.52.1.tar.gz", hash = "sha256:4232e5c2b423ed7c63baaeb6030355e14e1de1b9df096c9655b68a1e60e4de5f"},
+    {file = "textual-0.64.0-py3-none-any.whl", hash = "sha256:36274bc3e88fa12d99d07c80b35feb3c18b971c66de71900001571e9cf13a140"},
+    {file = "textual-0.64.0.tar.gz", hash = "sha256:fee0edd38cdd9a30c7558e9b39b01e82185f8b5218a2456f4f6c0450cb118cba"},
 ]
 
 [package.dependencies]
@@ -4460,7 +4444,7 @@ rich = ">=13.3.3"
 typing-extensions = ">=4.4.0,<5.0.0"
 
 [package.extras]
-syntax = ["tree-sitter (>=0.20.1,<0.21.0)", "tree_sitter_languages (>=1.7.0)"]
+syntax = ["tree-sitter (>=0.20.1,<0.21.0)", "tree-sitter-languages (==1.10.2)"]
 
 [[package]]
 name = "textual-dev"
@@ -4479,21 +4463,6 @@ click = ">=8.1.2"
 msgpack = ">=1.0.3"
 textual = ">=0.36.0"
 typing-extensions = ">=4.4.0,<5.0.0"
-
-[[package]]
-name = "textual-plotext"
-version = "0.2.1"
-description = "A Textual widget wrapper for the Plotext plotting library"
-optional = false
-python-versions = ">=3.7.2,<4.0"
-files = [
-    {file = "textual_plotext-0.2.1-py3-none-any.whl", hash = "sha256:a1055cf50fac9af11f56b5ff73442570eb5fd051e513b20aeb8b15a6a2abfcff"},
-    {file = "textual_plotext-0.2.1.tar.gz", hash = "sha256:bc6f2d75d8e20dda6321f8254dc3decda8f41f60e6e70a3ddd83b652b890c081"},
-]
-
-[package.dependencies]
-plotext = ">=5.2.8,<6.0.0"
-textual = ">=0.40.0"
 
 [[package]]
 name = "threadpoolctl"
@@ -5537,4 +5506,4 @@ test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-it
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.9"
-content-hash = "6ec590aff22a3d025e5c14a7ad7d942aa3269996c0eb441bc4e905ac6893d76f"
+content-hash = "fc3f3084f6da9908e888b814559f352b07b08a427458e34ce204a16f8bb0f93b"

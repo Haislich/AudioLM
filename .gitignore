@@ -2,6 +2,7 @@
 __pycache__
 .mypy_cache
 data/
+.DS_STORE
 # pyproject.toml
 # poetry.lock
 .gitignore
