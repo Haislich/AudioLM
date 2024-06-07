@@ -103,17 +103,22 @@ class TransformerDecoderOnly(nn.Module):
 
     def generate(self, prompt_ids, max_length: int, temperature: float = 0.8):
         self.eval()
+        prompt = prompt_ids
         with torch.no_grad():
             for _ in range(max_length):
-                logits = self.forward(prompt_ids)
+                logits = self.forward(prompt)
                 logits = logits[:, -1, :] / (temperature)
                 probs = F.softmax(logits, dim=-1)
                 next_token = torch.multinomial(
                     probs, num_samples=1
                 )  # sample from the distribution
-                prompt_ids = torch.cat([prompt_ids, next_token], dim=1)
-
-            return prompt_ids
+                prompt = torch.cat([prompt, next_token], dim=1)
+            print(prompt_ids.shape)
+            len_prompt = prompt_ids.shape[1]
+            token_generated = prompt_ids[:, len_prompt:]
+            print(token_generated.shape)
+            #token_generated = prompt_ids[]
+        return prompt_ids, token_generated
 
 
 class PositionalEncoding(nn.Module):

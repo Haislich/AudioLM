@@ -253,8 +253,8 @@ class SemanticTrainer(Trainer):
         
         self._train(self.semantic_transformer)
         if DEVICE=="cuda":
-            semantic_encoder = semantic_encoder.to('cpu')
-            semantic_transformer = semantic_transformer.to('cpu')
+            self.semantic_encoder.to('cpu')
+            self.semantic_transformer.to('cpu')
 
 
     def test(self):
