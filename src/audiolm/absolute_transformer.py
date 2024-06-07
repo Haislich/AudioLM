@@ -115,7 +115,8 @@ class TransformerDecoderOnly(nn.Module):
                 prompt = torch.cat([prompt, next_token], dim=1)
             print(prompt_ids.shape)
             len_prompt = prompt_ids.shape[1]
-            token_generated = prompt_ids[:, len_prompt:]
+            print(len_prompt)
+            token_generated = prompt[:, len_prompt:]
             print(token_generated.shape)
             #token_generated = prompt_ids[]
         return prompt_ids, token_generated
