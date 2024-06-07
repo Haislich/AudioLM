@@ -113,11 +113,8 @@ class TransformerDecoderOnly(nn.Module):
                     probs, num_samples=1
                 )  # sample from the distribution
                 prompt = torch.cat([prompt, next_token], dim=1)
-            print(prompt_ids.shape)
             len_prompt = prompt_ids.shape[1]
-            print(len_prompt)
             token_generated = prompt[:, len_prompt:]
-            print(token_generated.shape)
             #token_generated = prompt_ids[]
         return prompt_ids, token_generated
 
