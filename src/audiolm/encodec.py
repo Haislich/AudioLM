@@ -46,10 +46,10 @@ class Encodec(nn.Module):
         fine = []
         audio_scales = []
         with torch.no_grad():
-            for batch in input_values:
+            for elem in input_values:
                 # https://github.com/facebookresearch/encodec/tree/main#extracting-discrete-representations
 
-                encoded_frames = self.model.encode(batch.unsqueeze(0), bandwidth=6)
+                encoded_frames = self.model.encode(elem.unsqueeze(0), bandwidth=6)
                 # Remove the useless dimensions
                 codes = encoded_frames.audio_codes.squeeze((0, 1))
 
@@ -60,9 +60,9 @@ class Encodec(nn.Module):
                 )
                 # Return the codes in row-major order
 
-                coarse_codes = coarse_codes.T.reshape(coarse_quantizers * num_tokens)
+                coarse_codes = coarse_codes.reshape(coarse_quantizers * num_tokens)
                 coarse.append(coarse_codes)
-                fine_codes = fine_codes.T.reshape(fine_quantizers * num_tokens)
+                fine_codes = fine_codes.reshape(fine_quantizers * num_tokens)
                 fine.append(fine_codes)
                 audio_scales.append(encoded_frames.audio_scales)
 
