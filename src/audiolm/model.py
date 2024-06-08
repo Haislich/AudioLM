@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from math import floor
+
 import torch
 from torch import nn
 
@@ -25,7 +27,7 @@ class AudioLM:
         fine_acoustic_transformer: FineAcousticTransformer,
         # https://stackoverflow.com/a/53797072
         *,
-        audio_len=1,
+        #audio_len=1,
         # We set Q' = 4 such that we predict the flattened tokens corresponding
         # to the coarse 4 layers in the second stage.
         n_coarse_quantizers=4,
@@ -43,42 +45,42 @@ class AudioLM:
         self.semantic_transformer = semantic_transformer
         self.coarse_acoustic_transformer = coarse_acoustic_transformer
         self.fine_acoustic_transformer = fine_acoustic_transformer
-        self.audio_len = audio_len
+        #self.audio_len = audio_len
         self.n_coarse_quantizers = n_coarse_quantizers
         self.n_fine_quantizers = n_fine_quantizers
 
-    def generate(self, x: torch.Tensor, audiolen: int = 3):
-        # Add dimension at the beginning to simulate being a batch
-        # to conform with the rest of the API
+    def generate(self, x: torch.Tensor, audio_len: int = 3):
+
         semantic_encode = self.semantic_encoder(x)
-        semantic_token = self.semantic_transformer.generate(
-            semantic_encode, self.audio_len * 50
+        prompt_token, semantic_token = self.semantic_transformer.generate(
+            semantic_encode, audio_len * 50
         )
+
+        concat = torch.cat((prompt_token, semantic_token), dim=1)
 
         coarse_acoustic_tokens, fine_acoustic_tokens, audio_scales = (
             self.acoustic_encoder_decoder.encode(x)
         )
-        # print(f"coarse_acoustic_tokens.shape = {coarse_acoustic_tokens.shape}")
-        coarse_conditioning = torch.cat((semantic_token, coarse_acoustic_tokens), dim=1)
-        coarse_tokens = self.coarse_acoustic_transformer.generate(
-            coarse_conditioning, self.audio_len * 75
+
+        coarse_conditioning = torch.cat((concat, coarse_acoustic_tokens), dim=1)
+        _, coarse_tokens = self.coarse_acoustic_transformer.generate(
+            coarse_conditioning, audio_len * (75 * 4)
         )
-        # print(f"coarse_tokens.shape = {coarse_tokens.shape}")
+        coarse_tokens = coarse_tokens.unsqueeze(0).unsqueeze(0)
 
-        # print(f"Coarse conditioning {coarse_tokens.shape}")
-        # if self.fine_acoustic_transformer:
-        #     fine_acoustic_tokens = self.fine_acoustic_transformer.generate(
-        #         torch.cat((coarse_tokens, fine_acoustic_tokens), dim=1), 4
-        #     )
-        #     output = self.acoustic_encoder_decoder.decode(
-        #         fine_acoustic_tokens.unsqueeze(0), None
-        #     )
-        # else:
-        #     print(coarse_tokens.shape)
+        new_len = floor(coarse_tokens.shape[3]/4) *4
+        coarse_tokens = coarse_tokens[:, :, :, :new_len]
+        coarse_tokens = coarse_tokens.reshape(1,1,4, new_len // 4)
 
+        num_token = floor(coarse_acoustic_tokens.size(-1)/4)
+        coarse_acoustic_tokens = coarse_acoustic_tokens.reshape((4, num_token))
+        coarse_acoustic_tokens = coarse_acoustic_tokens.unsqueeze(0).unsqueeze(0)
+
+        output_concat = torch.cat((coarse_acoustic_tokens, coarse_tokens), dim=-1)
         output = self.acoustic_encoder_decoder.decode(
-            coarse_tokens.unsqueeze(0).unsqueeze(0), [None]
+            output_concat, [None]
         )
+
         return output["audio_values"]
 
     @staticmethod

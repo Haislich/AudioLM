@@ -11,6 +11,7 @@ import torchaudio
 
 from audiolm.data_preparation import AudioDataLoader
 from audiolm.model import AudioLM
+from audiolm.constants import DEVICE
 
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -42,10 +43,13 @@ class TestAudioLM(unittest.TestCase):
 
     def test_generation(self):
         audiolm = AudioLM.from_pretrained(MODELS_PATH)
-        elem = next(iter(self.train_dataloader))[0:1, :, :]
-
+        elem = next(iter(self.train_dataloader))[0:1, :, :].to(DEVICE)
+        test_generate = audiolm.generate(elem, audio_len=3).squeeze(0)
+        if DEVICE=="cuda":
+            test_generate = test_generate.cpu().detach()
+        torch.cuda.empty_cache()
         torchaudio.save(
-            DATA_PATH / "generated.flac", audiolm.generate(elem).squeeze(0), 24000
+            DATA_PATH / "generated.flac", test_generate, 24000
         )
 
 

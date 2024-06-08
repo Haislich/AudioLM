@@ -55,7 +55,7 @@ class TestTransformerTrainer(unittest.TestCase):
         print("End to end Pipeline for semantic modelling.")
         print("===========================================")
 
-        semantic_transformer = SemanticTransformer(num_heads=4, layers=2)
+        semantic_transformer = SemanticTransformer(num_heads=8, layers=4, feedforward_dim=2048)
         semantic_loss = nn.CrossEntropyLoss()
         semantic_optimizer = torch.optim.Adam(
             semantic_transformer.parameters(), lr=0.001
@@ -94,6 +94,7 @@ class TestTransformerTrainer(unittest.TestCase):
                 epochs=EPOCHS,
             )
             semantic_trainer.train()
+            torch.cuda.empty_cache()
 
     def _train_coarse_end2end(self):
         """Test if the semantic trainer can be correctly trained"""
@@ -101,7 +102,7 @@ class TestTransformerTrainer(unittest.TestCase):
         print("End to end Pipeline for semantic modelling.")
         print("===========================================")
 
-        semantic_transformer = SemanticTransformer(num_heads=4, layers=2)
+        semantic_transformer = SemanticTransformer(num_heads=8, layers=4, feedforward_dim=2048)
         semantic_transformer_root = (
             Path(SAVE_LOAD_PATH)
             / Path("models")
@@ -111,7 +112,7 @@ class TestTransformerTrainer(unittest.TestCase):
 
         load_model(semantic_transformer, semantic_transformer_path)
 
-        coarse_acoustic_transformer = CoarseAcousticTransformer()
+        coarse_acoustic_transformer = CoarseAcousticTransformer(num_heads=8, layers=4, feedforward_dim=2048)
         coarse_loss = nn.CrossEntropyLoss()
         coarse_optimizer = torch.optim.Adam(
             coarse_acoustic_transformer.parameters(), lr=0.001
@@ -154,6 +155,7 @@ class TestTransformerTrainer(unittest.TestCase):
                 epochs=EPOCHS,
             )
             coarse_acoustic_trainer.train()
+            torch.cuda.empty_cache()
 
 
 if __name__ == "__main__":

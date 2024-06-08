@@ -341,12 +341,14 @@ class CoarseAcousticTrainer(Trainer):
     def loss_generator(self, batch):
 
         semantic_encode = self.semantic_encoder(batch)
-        semantic_token = self.semantic_transformer.generate(
+        prompt_token, semantic_token = self.semantic_transformer.generate(
             semantic_encode, self.generate_audio_len * 50
         )
 
+        concat = torch.cat((prompt_token, semantic_token), dim=1)
+
         coarse_acoustic_tokens, _, _ = self.acoustic_encoder_decoder.encode(batch)
-        conditioning = torch.cat((semantic_token, coarse_acoustic_tokens), dim=1)
+        conditioning = torch.cat((concat, coarse_acoustic_tokens), dim=1)
 
         output, target = self.coarse_acoustic_transformer.fit(conditioning)
         loss = self.loss(output, target)
@@ -368,3 +370,108 @@ class CoarseAcousticTrainer(Trainer):
 
     def test(self):
         return self._test(self.coarse_acoustic_transformer)
+
+
+
+
+
+class FineAcousticTrainer(Trainer):
+    """Trainer class derived from `Trainer`."""
+
+    def __init__(
+        self,
+        semantic_encoder: W2VHuBert,
+        semantic_transformer: SemanticTransformer,
+        acoustic_encoder_decoder: Encodec,
+        coarse_acoustic_transformer: CoarseAcousticTransformer,
+        fine_acoustic_transformer: FineAcousticTransformer,
+        train_dataloader: AudioDataLoader,
+        val_dataloader: AudioDataLoader,
+        test_dataloader: AudioDataLoader,
+        loss: nn.Module,
+        optimizer: torch.optim.Optimizer,
+        intervals: int,
+        save_path: Path,
+        early_stop_counter: int,
+        early_stopping_range: int,
+        generate_audio_len: int,
+        epochs: int,
+    ):
+        """
+        Takes as input `semantic_encoder` and `semantic_transformer`.
+        They determine the `semantic_modelling`.
+
+        `semantic_encoder` must be trained ahead of time, this trainer only
+        trains `semantic_transformer`.
+
+        Args
+        ----
+            `semantic_encoder` (W2VHuBert)
+
+            `semantic_transformer` (TransformerDecoderOnly)
+
+            `train_dataloader` (AudioDataLoader)
+
+            `val_dataloader` (AudioDataLoader)
+
+            `test_dataloader` (AudioDataLoader)
+
+            `loss` (nn.Module)
+
+            `optimizer` (torch.optim.Optimizer)
+
+            `intervals` (int)
+
+            `save_path` (Path)
+
+            `early_stop_counter` (int)
+
+            `early_stopping_range` (int)
+
+            `epochs` (int)
+        """
+        super().__init__(
+            semantic_encoder=semantic_encoder,
+            semantic_transformer=semantic_transformer,
+            acoustic_encoder_decoder=acoustic_encoder_decoder,
+            coarse_acoustic_transformer=coarse_acoustic_transformer,
+            fine_acoustic_transformer=fine_acoustic_transformer,
+            train_dataloader=train_dataloader,
+            val_dataloader=val_dataloader,
+            test_dataloader=test_dataloader,
+            loss=loss,
+            optimizer=optimizer,
+            intervals=intervals,
+            save_path=save_path,
+            early_stop_counter=early_stop_counter,
+            early_stopping_range=early_stopping_range,
+            epochs=epochs,
+        )
+        self.generate_audio_len = generate_audio_len
+
+    def loss_generator(self, batch):
+        semantic_encode = self.semantic_encoder(batch)
+        prompt_token, semantic_token = self.semantic_transformer.generate(semantic_encode, self.generate_audio_len * 50)
+
+        concat = torch.cat((prompt_token, semantic_token), dim=1)
+
+        coarse_acoustic_tokens, fine_acoustic_tokens, _ = (
+            self.acoustic_encoder_decoder.encode(batch)
+        )
+        coarse_conditioning = torch.cat((concat, coarse_acoustic_tokens), dim=1)
+
+        _, coarse_tokens = self.coarse_acoustic_transformer.generate(
+            coarse_conditioning, self.generate_audio_len * (75 * 4)
+        )
+
+        output, target = self.fine_acoustic_transformer(
+            torch.cat((coarse_tokens, fine_acoustic_tokens), dim=1)
+        )
+        loss = self.loss(output, target)
+        return loss
+
+    def train(self):
+        return self._train(self.fine_acoustic_transformer)
+
+    def test(self):
+        return self._test(self.fine_acoustic_transformer)
