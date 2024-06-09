@@ -9,9 +9,15 @@
 
 Implementation of AudioLM paper by google
 
-## Dependencies
+## Installation
 
-## Setting up the development environment
+```bash
+pip install https://github.com/Haislich/AudioLM/raw/main/dist/audiolm-0.1.0.tar.gz
+```
+
+You can find the necessary models, runs and data [here](https://drive.google.com/drive/u/1/folders/1nMCBI1C05Ds-NpNaTuIU8TsSI2k_8Q3Q)
+
+## Setting up the development environment/ building from source
 
 AudioLM relies on relies on the [Poetry build system](https://python-poetry.org/).
 
@@ -30,14 +36,6 @@ poetry shell                                    # This creates the venv.
 poetry install                                  # This install the required dependencies.
 ```
 
-### Ubuntu
-
-Some libraries might not work out of the box, so this packages are required:
-
-```bash
-sudo apt-get install libportaaudio2
-```
-
 ## References
 
 - [Github guidelines for repository files](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions/creating-a-default-community-health-file)
@@ -50,6 +48,6 @@ sudo apt-get install libportaaudio2
 - [Even more on transposed convolution and some examples of dilations](https://medium.com/@marsxiang/convolutions-transposed-and-deconvolution-6430c358a5b6)
 - [Convolutions in Autoregressive Neural Networks](https://www.kilians.net/post/convolution-in-autoregressive-neural-networks/)
 - [Encodec, meta neural encoder](https://github.com/facebookresearch/encodec)
-- [https://ml-retrospectives.github.io/neurips2019/accepted_retrospectives/2019/film/]
+
 - [AudioLM: a Language Modeling Approach to Audio Generation](https://research.google/blog/audiolm-a-language-modeling-approach-to-audio-generation/#:~:text=AudioLM%20is%20a%20pure%20audio,models%2C%20one%20for%20each%20stage)
 - [Google Ai principles](https://ai.google/responsibility/principles/)
