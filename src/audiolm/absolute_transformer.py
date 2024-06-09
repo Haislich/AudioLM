@@ -87,12 +87,6 @@ class TransformerDecoderOnly(nn.Module):
         # forward pass
         # we pass the input to the DecoderOnly and the casual mask, so at time-i
         # the model can only attend to the tokens from time 0 to i and predict the token at time i+1
-        # example:
-        # semantic_token_batch = [t1, t2, t3, t4]
-        # input = [t1, t2, t3], target = [t2, t3, t4], causal_mask = [[1, 0, 0], [1, 1, 0], [1, 1, 1]]
-        # iteration 1: input = [t1, t2, t3] mask = [1, 0, 0] -> predict t2
-        # iteration 2: input = [t1, t2, t3] mask = [1, 1, 0] -> predict t3
-        # iteration 3: input = [t1, t2, t3] mask = [1, 1, 1] -> predict t4
 
         output = self.forward(input_token, tgt_mask=causal_mask)
 
