@@ -121,7 +121,7 @@ class W2VHuBert(nn.Module):
         self.layer = 6
         self.clusters = torch.from_numpy(self.kmeans.cluster_centers_).to(DEVICE)
 
-    def forward(self, input_audio):
+    def forward(self, input_audio, return_embeddings=False):
         """
         Perform forward pass of the quantizer.
 
@@ -156,6 +156,10 @@ class W2VHuBert(nn.Module):
             distance = -torch.cdist(embeddings, expand_cluster, p=2)
             quantized = distance.argmax(-1)
             # print(quantized.shape)
+        
+        if return_embeddings:
+            return embeddings
+        
         return quantized
 
     def build_TokenDataset(self):
