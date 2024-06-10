@@ -101,7 +101,7 @@ class Trainer(ABC):
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-            batch.detach().cpu() # Free up memory
+            batch.detach().cpu()  # Free up memory
         train_loss /= len(self.train_dataloader)
         return train_loss
 
@@ -113,7 +113,7 @@ class Trainer(ABC):
                 batch = batch.to(DEVICE)
                 loss = self.loss_generator(batch)
                 validation_loss += loss.item()
-                batch.detach().cpu() # Free up memory
+                batch.detach().cpu()  # Free up memory
         validation_loss /= len(self.val_dataloader)
 
         return validation_loss
@@ -148,8 +148,8 @@ class Trainer(ABC):
             if self.early_stop_counter >= self.early_stopping_range:
                 print(f"Early stopping training at epoch: {epoch+1}")
                 break
-        
-        model.detach().cpu() # Free up memory
+
+        model.detach().cpu()  # Free up memory
         writer.flush()
         writer.close()
         save_model(model, self.save_path)
@@ -162,7 +162,7 @@ class Trainer(ABC):
                 batch = batch.to(DEVICE)
                 loss = self.loss_generator(batch)
                 test_loss += loss.item()
-                batch.detach().cpu() # Free up memory
+                batch.detach().cpu()  # Free up memory
         test_loss /= len(self.test_dataloader)
         print(f"Test Loss: {test_loss: .4f}")
 
@@ -250,12 +250,11 @@ class SemanticTrainer(Trainer):
     def train(self):
         self.semantic_encoder.to(DEVICE)
         self.semantic_transformer.to(DEVICE)
-        
-        self._train(self.semantic_transformer)
-        if DEVICE=="cuda":
-            self.semantic_encoder.to('cpu')
-            self.semantic_transformer.to('cpu')
 
+        self._train(self.semantic_transformer)
+        if DEVICE == "cuda":
+            self.semantic_encoder.to("cpu")
+            self.semantic_transformer.to("cpu")
 
     def test(self):
         return self._test(self.semantic_transformer)
@@ -279,7 +278,6 @@ class CoarseAcousticTrainer(Trainer):
         save_path: Path,
         early_stop_counter: int,
         early_stopping_range: int,
-        generate_audio_len: int,
         epochs: int,
     ):
         """
@@ -336,19 +334,13 @@ class CoarseAcousticTrainer(Trainer):
         self.semantic_transformer = semantic_transformer
         self.acoustic_encoder_decoder = acoustic_encoder_decoder
         self.coarse_acoustic_transformer = coarse_acoustic_transformer
-        self.generate_audio_len = generate_audio_len
 
     def loss_generator(self, batch):
 
         semantic_encode = self.semantic_encoder(batch)
-        prompt_token, semantic_token = self.semantic_transformer.generate(
-            semantic_encode, self.generate_audio_len * 50
-        )
-
-        concat = torch.cat((prompt_token, semantic_token), dim=1)
 
         coarse_acoustic_tokens, _, _ = self.acoustic_encoder_decoder.encode(batch)
-        conditioning = torch.cat((concat, coarse_acoustic_tokens), dim=1)
+        conditioning = torch.cat((semantic_encode, coarse_acoustic_tokens), dim=1)
 
         output, target = self.coarse_acoustic_transformer.fit(conditioning)
         loss = self.loss(output, target)
@@ -361,18 +353,15 @@ class CoarseAcousticTrainer(Trainer):
         self.coarse_acoustic_transformer.to(DEVICE)
 
         self._train(self.coarse_acoustic_transformer)
-        
-        if DEVICE=="cuda":
-            self.semantic_encoder.to('cpu')
-            self.semantic_transformer.to('cpu')
-            self.acoustic_encoder_decoder.to('cpu')
-            self.coarse_acoustic_transformer.to('cpu')
+
+        if DEVICE == "cuda":
+            self.semantic_encoder.to("cpu")
+            self.semantic_transformer.to("cpu")
+            self.acoustic_encoder_decoder.to("cpu")
+            self.coarse_acoustic_transformer.to("cpu")
 
     def test(self):
         return self._test(self.coarse_acoustic_transformer)
-
-
-
 
 
 class FineAcousticTrainer(Trainer):
@@ -451,7 +440,9 @@ class FineAcousticTrainer(Trainer):
 
     def loss_generator(self, batch):
         semantic_encode = self.semantic_encoder(batch)
-        prompt_token, semantic_token = self.semantic_transformer.generate(semantic_encode, self.generate_audio_len * 50)
+        prompt_token, semantic_token = self.semantic_transformer.generate(
+            semantic_encode, self.generate_audio_len * 50
+        )
 
         concat = torch.cat((prompt_token, semantic_token), dim=1)
 

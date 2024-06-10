@@ -1,7 +1,3 @@
-<!-- <a target="_blank" href="https://colab.research.google.com/github/Haislich/AudioLM">
-  <img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/>
-</a> -->
-
 # AudioLM
 
 [![linting: pylint](https://img.shields.io/badge/linting-pylint-yellowgreen)](https://github.com/pylint-dev/pylint)
@@ -14,8 +10,6 @@ Implementation of AudioLM paper by google
 ```bash
 pip install https://github.com/Haislich/AudioLM/raw/main/dist/audiolm-0.1.0.tar.gz
 ```
-
-You can find the necessary models, runs and data [here](https://drive.google.com/drive/u/1/folders/1nMCBI1C05Ds-NpNaTuIU8TsSI2k_8Q3Q)
 
 ## Setting up the development environment/ building from source
 
