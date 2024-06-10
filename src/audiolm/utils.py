@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import Tuple, Optional
 import torch
 from torch import nn
+import numpy as np
+from scipy.linalg import sqrtm
+
 
 
 def save_checkpoint(
@@ -137,3 +140,30 @@ def save_model(model: nn.Module, save_path: os.PathLike):
     model_path = Path(save_path) / "models" / model_name / f"{model_name}.pth"
     torch.save(model.state_dict(), model_path)
     print(f"Model saved: {model_path}")
+
+
+
+def calculate_mean_and_cov(embeddings):
+    if embeddings.dim() > 2:
+        embeddings = embeddings.view(-1, embeddings.size(-1))
+    mu = torch.mean(embeddings, axis=0)
+    sigma = torch.cov(embeddings.t())
+    return mu, sigma
+
+
+
+def frechet_distance(mu1, sigma1, mu2, sigma2):
+    mu1 = mu1.to('cpu')
+    sigma1 = sigma1.to('cpu')
+    mu2 = mu2.to('cpu')
+    sigma2 = sigma2.to('cpu')
+    
+    diff = mu1 - mu2
+    covmean = sqrtm((sigma1.numpy() @ sigma2.numpy()))
+    if np.iscomplexobj(covmean):
+        covmean = covmean.real
+    covmean = torch.from_numpy(covmean)
+    
+    term1 = torch.dot(diff, diff)
+    term2 = torch.trace(sigma1 + sigma2 - 2 * covmean)
+    return term1 + term2
